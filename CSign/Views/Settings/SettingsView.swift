@@ -105,13 +105,13 @@ struct SettingsView: View {
 					}
 				}
 				
-				NBSection("Tri ân tác giả") {
+				NBSection("Credits & Acknowledgement") {
 					Link(destination: URL(string: "https://github.com/khcrysalis/CSign")!) {
-						Label("Mã nguồn gốc: Samara (khcrysalis)", systemImage: "heart.fill")
+						Label("Original Source Code: Samara (khcrysalis)", systemImage: "heart.fill")
 							.foregroundColor(.red)
 					}
 				} footer: {
-					Text("Xin gửi lời cảm ơn chân thành tới Samara đã phát triển mã nguồn mở CSign tuyệt vời này.")
+					Text("A special thanks to Samara for developing this amazing open-source project.")
 				}
 				
 			}
