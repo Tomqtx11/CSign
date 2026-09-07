@@ -112,11 +112,11 @@ class TweakHandler {
 				let frameworksDir = _app.appendingPathComponent("Frameworks")
 				try _fileManager.createDirectoryIfNeeded(at: frameworksDir)
 				let destinationURL = frameworksDir.appendingPathComponent(url.lastPathComponent)
-				try _fileManager.moveFileIfNeeded(from: url, to: destinationURL)
+				try _fileManager.copyFileIfNeeded(from: url, to: destinationURL)
 				try await _handleDylib(framework: destinationURL)
 			case "bundle":
 				let destinationURL = _app.appendingPathComponent(url.lastPathComponent)
-				try _fileManager.moveFileIfNeeded(from: url, to: destinationURL)
+				try _fileManager.copyFileIfNeeded(from: url, to: destinationURL)
 			default:
 				Logger.misc.warning("Unsupported file type: \(url.lastPathComponent), skipping.")
 			}
@@ -146,7 +146,7 @@ class TweakHandler {
 		destinationURL = destinationURL.appendingPathComponent(url.lastPathComponent)
 		
 		
-		try _fileManager.moveFileIfNeeded(from: url, to: destinationURL)
+		try _fileManager.copyFileIfNeeded(from: url, to: destinationURL)
 		
 		guard let appexe = Bundle(url: _app)?.executableURL else {
 			return

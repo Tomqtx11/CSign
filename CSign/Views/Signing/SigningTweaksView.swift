@@ -11,6 +11,7 @@ import NimbleViews
 // MARK: - View
 struct SigningTweaksView: View {
 	@State private var _isAddingPresenting = false
+	@State private var _isBuiltInPresenting = false
 	
 	@Binding var options: Options
 	
@@ -49,12 +50,17 @@ struct SigningTweaksView: View {
 			}
 		}
 		.toolbar {
-			NBToolbarButton(
-				systemImage: "plus",
-				style: .icon,
-				placement: .topBarTrailing
-			) {
-				_isAddingPresenting = true
+			ToolbarItem(placement: .topBarTrailing) {
+				Menu {
+					Button(.localized("Choose from Files"), systemImage: "folder") {
+						_isAddingPresenting = true
+					}
+					Button(.localized("Built-In Tweaks"), systemImage: "puzzlepiece") {
+						_isBuiltInPresenting = true
+					}
+				} label: {
+					Image(systemName: "plus")
+				}
 			}
 		}
 		.sheet(isPresented: $_isAddingPresenting) {
@@ -72,6 +78,9 @@ struct SigningTweaksView: View {
 				}
 			)
 			.ignoresSafeArea()
+		}
+		.sheet(isPresented: $_isBuiltInPresenting) {
+			BuiltInTweaksView(options: $options)
 		}
 		.animation(.smooth, value: options.injectionFiles)
 	}
@@ -102,6 +111,58 @@ extension SigningTweaksView {
 			}
 		} label: {
 			Label(.localized("Delete"), systemImage: "trash")
+		}
+	}
+}
+
+struct BuiltInTweaksView: View {
+	@Environment(\.dismiss) var dismiss
+	@Binding var options: Options
+	
+	@State private var builtInURLs: [URL] = []
+	
+	var body: some View {
+		NavigationView {
+			NBList(.localized("Built-In Tweaks")) {
+				if builtInURLs.isEmpty {
+					Text(verbatim: .localized("No built-in tweaks found."))
+						.foregroundColor(.gray)
+				} else {
+					ForEach(builtInURLs, id: \.absoluteString) { url in
+						Button(action: {
+							if !options.injectionFiles.contains(where: { $0.lastPathComponent == url.lastPathComponent }) {
+								options.injectionFiles.append(url)
+							}
+							dismiss()
+						}) {
+							HStack {
+								Label(url.lastPathComponent, systemImage: "puzzlepiece")
+								Spacer()
+								if options.injectionFiles.contains(where: { $0.lastPathComponent == url.lastPathComponent }) {
+									Image(systemName: "checkmark")
+										.foregroundColor(.blue)
+								}
+							}
+						}
+						.foregroundColor(.primary)
+					}
+				}
+			}
+			.navigationTitle(.localized("Built-In Tweaks"))
+			.navigationBarTitleDisplayMode(.inline)
+			.toolbar {
+				ToolbarItem(placement: .topBarTrailing) {
+					Button(.localized("Done")) {
+						dismiss()
+					}
+				}
+			}
+		}
+		.onAppear {
+			if let builtInPath = Bundle.main.resourceURL?.appendingPathComponent("BuiltInTweaks"),
+			   let files = try? FileManager.default.contentsOfDirectory(at: builtInPath, includingPropertiesForKeys: nil) {
+				builtInURLs = files.filter { $0.pathExtension == "dylib" }.sorted(by: { $0.lastPathComponent < $1.lastPathComponent })
+			}
 		}
 	}
 }

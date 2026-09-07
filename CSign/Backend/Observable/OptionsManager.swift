@@ -18,15 +18,8 @@ class OptionsManager: ObservableObject {
 	init() {
 		if
 			let data = UserDefaults.standard.data(forKey: _key),
-			var savedOptions = try? JSONDecoder().decode(Options.self, from: data)
+			let savedOptions = try? JSONDecoder().decode(Options.self, from: data)
 		{
-			// ensure BuiltInTweaks are present in case they were not saved
-			let builtInURLs = Options.defaultOptions.injectionFiles
-			for url in builtInURLs {
-				if !savedOptions.injectionFiles.contains(where: { $0.lastPathComponent == url.lastPathComponent }) {
-					savedOptions.injectionFiles.append(url)
-				}
-			}
 			self.options = savedOptions
 		} else {
 			self.options = Options.defaultOptions
@@ -146,14 +139,7 @@ struct Options: Codable, Equatable {
 		dynamicProtection: false,
 		identifiers: [:],
 		displayNames: [:],
-		injectionFiles: {
-			var urls: [URL] = []
-			if let builtInPath = Bundle.main.resourceURL?.appendingPathComponent("BuiltInTweaks"),
-			   let files = try? FileManager.default.contentsOfDirectory(at: builtInPath, includingPropertiesForKeys: nil) {
-				urls.append(contentsOf: files.filter { $0.pathExtension == "dylib" })
-			}
-			return urls
-		}(),
+		injectionFiles: [],
 		disInjectionFiles: [],
 		removeFiles: [],
 		fileSharing: true,

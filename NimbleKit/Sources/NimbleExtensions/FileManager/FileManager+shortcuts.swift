@@ -42,6 +42,12 @@ extension FileManager {
 		}
 	}
 	
+	public func copyFileIfNeeded(from sourceURL: URL, to destinationURL: URL) throws {
+		if !self.fileExists(atPath: destinationURL.path) {
+			try self.copyItem(at: sourceURL, to: destinationURL)
+		}
+	}
+	
 	public func createDirectoryIfNeeded(at url: URL) throws {
 		if !self.fileExists(atPath: url.path) {
 			try self.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
