@@ -131,20 +131,17 @@ struct SourceAppsView: View {
 		.onChange(of: _sortOption) { newValue in
 			_sortOptionRawValue = newValue.rawValue
 		}
-		.background(
-			Group {
+		.navigationDestination(
+			isPresented: Binding(
+				get: { _selectedRoute != nil },
+				set: { if !$0 { _selectedRoute = nil } }
+			),
+			destination: {
 				if let route = _selectedRoute {
-					NavigationLink(
-						destination: SourceAppsDetailView(
-							sourceURL: route.sourceURL,
-							source: route.source,
-							app: route.app
-						),
-						isActive: Binding(
-							get: { _selectedRoute != nil },
-							set: { if !$0 { _selectedRoute = nil } }
-						),
-						label: { EmptyView() }
+					SourceAppsDetailView(
+						sourceURL: route.sourceURL,
+						source: route.source,
+						app: route.app
 					)
 				}
 			}
@@ -220,16 +217,4 @@ extension SourceAppsView {
 
 import SwiftUI
 
-extension View {
-	@ViewBuilder
-	func navigationDestinationIfAvailable<Item: Identifiable & Hashable, Destination: View>(
-		item: Binding<Item?>,
-		@ViewBuilder destination: @escaping (Item) -> Destination
-	) -> some View {
-		if #available(iOS 17, *) {
-			self.navigationDestination(item: item, destination: destination)
-		} else {
-			self
-		}
-	}
-}
+
