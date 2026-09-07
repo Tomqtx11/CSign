@@ -159,6 +159,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		ResetView.clearWorkCache()
 		_addDefaultCertificates()
 		_addDefaultSources()
+		_addDefaultTweaks()
 		return true
 	}
 	
@@ -261,6 +262,34 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		}
 	}
 
+	private func _addDefaultTweaks() {
+		guard UserDefaults.standard.bool(forKey: "csign.didImportDefaultTweaks") == false,
+			  let builtInPath = Bundle.main.resourceURL?.appendingPathComponent("BuiltInTweaks")
+		else { return }
+		
+		do {
+			let folderContents = try FileManager.default.contentsOfDirectory(
+				at: builtInPath,
+				includingPropertiesForKeys: nil,
+				options: .skipsHiddenFiles
+			)
+			
+			let dylibs = folderContents.filter { $0.pathExtension == "dylib" }
+			var added = false
+			for dylib in dylibs {
+				if !OptionsManager.shared.options.injectionFiles.contains(where: { $0.lastPathComponent == dylib.lastPathComponent }) {
+					OptionsManager.shared.options.injectionFiles.append(dylib)
+					added = true
+				}
+			}
+			if added {
+				OptionsManager.shared.saveOptions()
+			}
+			UserDefaults.standard.set(true, forKey: "csign.didImportDefaultTweaks")
+		} catch {
+			Logger.misc.error("Failed to list BuiltInTweaks: \(error)")
+		}
+	}
 }
 import SwiftUI
 import NimbleViews
