@@ -23,11 +23,7 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 		tableView.register(UITableViewCell.self, forCellReuseIdentifier: "AppCell")
 		tableView.register(UITableViewHeaderFooterView.self, forHeaderFooterViewReuseIdentifier: "SectionHeader")
 		
-		if #available(iOS 17, *) {
-			tableView.allowsSelection = true
-		} else {
-			tableView.allowsSelection = false
-		}
+		tableView.allowsSelection = true
 		
 		if
 			let firstSource = sourceContexts.first,
