@@ -130,21 +130,16 @@ class TweakHandler {
 		var destinationURL = _app
 		var injectFolder = _options.injectFolder
 		
-		// check for "/Frameworks/", then append the destinationUrl
-		if _options.injectFolder == .frameworks {
+		if _options.injectPath == .rpath {
+			destinationURL = destinationURL.appendingPathComponent("Frameworks")
+			injectFolder = .root
+		} else if _options.injectFolder == .frameworks {
 			destinationURL = destinationURL.appendingPathComponent("Frameworks")
 		}
 		
-		// We check for "@rpath" and "/Frameworks/", if they're both enabled force
-		// the inject folder to be root "/" instead, as the @rpath is already in
-		// frameworks
-		if
-			_options.injectPath == .rpath && _options.injectFolder == .frameworks
-		{
-			injectFolder = .root
-		}
-		
 		destinationURL = destinationURL.appendingPathComponent(url.lastPathComponent)
+		
+		try? _fileManager.createDirectoryIfNeeded(at: destinationURL.deletingLastPathComponent())
 		
 		
 		if !_fileManager.fileExists(atPath: destinationURL.path) {
@@ -322,20 +317,11 @@ class TweakHandler {
 			return
 		}
 		
-		var injectFolder = _options.injectFolder
-		if _options.injectPath == .rpath && _options.injectFolder == .frameworks {
-			injectFolder = .root
-		}
-		
 		let injectPath: String
-		if _options.injectPath == .rpath {
-			injectPath = "@rpath/\(dylibName)"
+		if _options.injectPath == .rpath || _options.injectFolder == .frameworks {
+			injectPath = "@executable_path/../../Frameworks/\(dylibName)"
 		} else {
-			if injectFolder == .frameworks {
-				injectPath = "@executable_path/../../Frameworks/\(dylibName)"
-			} else {
-				injectPath = "@executable_path/../../\(dylibName)"
-			}
+			injectPath = "@executable_path/../../\(dylibName)"
 		}
 		
 		let success = Zsign.injectDyLib(
