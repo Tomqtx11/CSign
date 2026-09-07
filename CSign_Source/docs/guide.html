@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hướng dẫn CSign</title>
+    <style>
+        :root {
+            /* Light mode variables */
+            --bg-color: #f2f2f7;
+            --surface-color: #ffffff;
+            --text-primary: #000000;
+            --text-secondary: #3c3c43;
+            --accent-color: #007aff;
+            --border-color: #e5e5ea;
+            --btn-bg: #e5e5ea;
+            --btn-hover: #d1d1d6;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                /* Dark mode variables */
+                --bg-color: #000000;
+                --surface-color: #1c1c1e;
+                --text-primary: #ffffff;
+                --text-secondary: #ebebf5;
+                --accent-color: #0a84ff;
+                --border-color: #38383a;
+                --btn-bg: #2c2c2e;
+                --btn-hover: #3a3a3c;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        header {
+            background-color: var(--surface-color);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .section {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .section:nth-child(1) { animation-delay: 0.1s; }
+        .section:nth-child(2) { animation-delay: 0.2s; }
+        .section:nth-child(3) { animation-delay: 0.3s; }
+        .section:nth-child(4) { animation-delay: 0.4s; }
+        .section:nth-child(5) { animation-delay: 0.5s; }
+        .section:nth-child(6) { animation-delay: 0.6s; }
+        .section:nth-child(7) { animation-delay: 0.7s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h2 {
+            font-size: 22px;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        ol, ul {
+            color: var(--text-secondary);
+            padding-left: 20px;
+            margin-bottom: 16px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .contact-links {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .contact-btn {
+            background-color: var(--btn-bg);
+            color: var(--text-primary);
+            padding: 12px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background-color 0.2s;
+        }
+
+        .contact-btn:hover {
+            background-color: var(--btn-hover);
+            text-decoration: none;
+        }
+
+        .emoji-icon {
+            font-size: 24px;
+        }
+
+        /* Video container for responsive iframes */
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 16px 0;
+            background-color: #000;
+        }
+        
+        .video-container iframe, .video-container video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>📖 Hướng dẫn CSign</h1>
+    </header>
+
+    <div class="container">
+        
+        <div class="section">
+            <h2><span class="emoji-icon">📱</span> Giới thiệu CSign</h2>
+            <p>CSign là một công cụ mạnh mẽ dành cho iOS, cho phép bạn dễ dàng ký các ứng dụng IPA trực tiếp trên thiết bị của mình mà không cần máy tính. Với giao diện hiện đại và trực quan, CSign mang đến trải nghiệm tuyệt vời cho người dùng.</p>
+            <div class="video-container">
+                <!-- Thay link video giới thiệu tại đây -->
+                <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2><span class="emoji-icon">⬇️</span> Cách cài đặt</h2>
+            <p>Bạn có thể cài đặt CSign thông qua các phương pháp sau:</p>
+            <ul>
+                <li><strong>TrollStore:</strong> Khuyên dùng. Tải file IPA của CSign và cài đặt trực tiếp qua TrollStore để không bị thu hồi chứng chỉ.</li>
+                <li><strong>Sideloading:</strong> Sử dụng các công cụ như Sideloadly, AltStore, hoặc Scarlet để cài đặt CSign bằng chứng chỉ nhà phát triển hoặc chứng chỉ miễn phí (có thời hạn 7 ngày).</li>
+            </ul>
+            <div class="video-container">
+                <!-- Thay link video hướng dẫn cài đặt tại đây -->
+                <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2><span class="emoji-icon">🔑</span> Nhập chứng chỉ</h2>
+            <p>Để bắt đầu ký ứng dụng, bạn cần thêm chứng chỉ vào CSign:</p>
+            <ol>
+                <li>Vào mục <strong>Cài đặt</strong> -> <strong>Quản lý chứng chỉ</strong>.</li>
+                <li>Nhấn nút <strong>Thêm chứng chỉ</strong> (dấu +).</li>
+                <li>Bạn có thể chọn nhập từng file (.p12 và .mobileprovision) hoặc nhập từ <strong>file ZIP</strong> chứa cả hai.</li>
+                <li>Nhập mật khẩu của chứng chỉ và nhấn <strong>Lưu</strong>.</li>
+            </ol>
+            <div class="video-container">
+                <!-- Thay link video hướng dẫn nhập chứng chỉ tại đây -->
+                <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2><span class="emoji-icon">✍️</span> Ký ứng dụng IPA</h2>
+            <p>Quá trình ký ứng dụng rất đơn giản:</p>
+            <ol>
+                <li>Vào tab <strong>Ký ứng dụng</strong>.</li>
+                <li>Chọn file IPA mà bạn muốn cài đặt.</li>
+                <li>Chọn chứng chỉ bạn đã thêm ở bước trước.</li>
+                <li>Tùy chỉnh cấu hình (nếu cần) như Đổi tên, Đổi Bundle ID.</li>
+                <li>Nhấn <strong>Bắt đầu ký</strong>. Sau khi hoàn tất, bạn có thể cài đặt ngay lập tức.</li>
+            </ol>
+            <div class="video-container">
+                <!-- Thay link video hướng dẫn ký IPA tại đây -->
+                <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2><span class="emoji-icon">💉</span> Tiêm Tweak</h2>
+            <p>CSign hỗ trợ tiêm các file dylib, deb vào ứng dụng của bạn:</p>
+            <ol>
+                <li>Trong màn hình thiết lập ký, cuộn xuống phần <strong>Thư viện (Dylibs/Frameworks)</strong>.</li>
+                <li>Thêm các file .dylib hoặc .deb mà bạn muốn tiêm.</li>
+                <li>Tiến hành ký như bình thường, các tweak sẽ được tích hợp vào IPA.</li>
+            </ol>
+            <div class="video-container">
+                <!-- Thay link video hướng dẫn tiêm tweak tại đây -->
+                <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2><span class="emoji-icon">🌐</span> Cài đặt máy chủ ký</h2>
+            <p>CSign cho phép bạn thiết lập máy chủ ký (Sign Server) để tạo link cài đặt qua trình duyệt (OTA):</p>
+            <ul>
+                <li>Đi tới phần Cài đặt -> Máy chủ.</li>
+                <li>Khởi động máy chủ cục bộ.</li>
+                <li>Bạn có thể quét mã QR hoặc truy cập đường link để cài đặt app ngay từ Safari.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2><span class="emoji-icon">📞</span> Liên hệ & Hỗ trợ</h2>
+            <p>Nếu bạn cần hỗ trợ hoặc muốn theo dõi các cập nhật mới nhất, hãy tham gia cộng đồng của chúng tôi:</p>
+            <div class="contact-links">
+                <a href="https://t.me/tomqtx1111" target="_blank" class="contact-btn">
+                    <span class="emoji-icon">💬</span> Liên hệ admin
+                </a>
+                <a href="https://t.me/chungchicuios" target="_blank" class="contact-btn">
+                    <span class="emoji-icon">👥</span> Tham gia group
+                </a>
+                <a href="https://t.me/chungchifree11" target="_blank" class="contact-btn">
+                    <span class="emoji-icon">📢</span> Kênh thông báo
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>
