@@ -40,7 +40,8 @@ $(PLATFORMS): deps
 		-derivedDataPath $(TMP)/$@ \
 		-skipPackagePluginValidation \
 		CODE_SIGNING_ALLOWED=NO \
-		ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO
+		ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO \
+		FEATHER_PROJECT_VERSION="1.0"
 
 	mkdir -p _build/Payload
 	cp -R _build/Applications/*.app _build/Payload/CSign.app
