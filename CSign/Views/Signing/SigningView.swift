@@ -116,12 +116,7 @@ struct SigningView: View {
 
 			.toolbar {
 				NBToolbarButton(role: .dismiss)
-				ToolbarItem(placement: .principal) {
-					Image("Glyph")
-						.resizable()
-						.scaledToFit()
-						.frame(height: 38)
-				}
+				// Removed CSign icon from here
 				NBToolbarButton(
 					.localized("Reset"),
 					style: .text,
@@ -190,7 +185,9 @@ struct SigningView: View {
 		.onChange(of: _temporaryOptions.cloneApp) { newValue in
 			guard let identifier = app.identifier else { return }
 			if newValue {
-				_temporaryOptions.appIdentifier = "\(identifier).\(_optionsManager.options.ppqString)"
+				let letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+				let randomSuffix = String((0..<6).map{ _ in letters.randomElement()! })
+				_temporaryOptions.appIdentifier = "\(identifier).\(randomSuffix)"
 			} else {
 				_temporaryOptions.appIdentifier = nil
 			}
