@@ -55,8 +55,14 @@ struct SourceAppsCellView: View {
 	}
 	
 	static func appDescription(app: ASRepository.App) -> String {
+		var sizeString: String? = nil
+		if let size = app.currentAppVersion?.size ?? (app.size != nil ? UInt(app.size!) : nil) {
+			sizeString = ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file)
+		}
+		
 		let optionalComponents: [String?] = [
 			app.currentVersion,
+			sizeString,
 			app.currentDescription ?? .localized("An awesome application")
 		]
 		

@@ -126,8 +126,8 @@ struct SourceAppsDetailView: View {
 							_infoRow(title: .localized("Developer"), value: developer)
 						}
 						
-						if let size = app.size {
-							_infoRow(title: .localized("Size"), value: size.formattedByteCount)
+						if let size = app.currentAppVersion?.size ?? (app.size != nil ? UInt(app.size!) : nil) {
+							_infoRow(title: .localized("Size"), value: Int64(size).formattedByteCount)
 						}
 						
 						if let category = app.category {
@@ -290,8 +290,8 @@ extension SourceAppsDetailView {
 			pills.append(NBPillItem(title: version, icon: "tag", color: Color.accentColor))
 		}
 		
-		if let size = app.size {
-			pills.append(NBPillItem(title: size.formattedByteCount, icon: "archivebox", color: .secondary))
+		if let size = app.currentAppVersion?.size ?? (app.size != nil ? UInt(app.size!) : nil) {
+			pills.append(NBPillItem(title: Int64(size).formattedByteCount, icon: "archivebox", color: .secondary))
 		}
 		
 		return pills
