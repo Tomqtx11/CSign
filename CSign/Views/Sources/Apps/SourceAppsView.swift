@@ -131,13 +131,24 @@ struct SourceAppsView: View {
 		.onChange(of: _sortOption) { newValue in
 			_sortOptionRawValue = newValue.rawValue
 		}
-		.navigationDestinationIfAvailable(item: $_selectedRoute) { route in
-			SourceAppsDetailView(
-				sourceURL: route.sourceURL,
-				source: route.source,
-				app: route.app
-			)
-		}
+		.background(
+			Group {
+				if let route = _selectedRoute {
+					NavigationLink(
+						destination: SourceAppsDetailView(
+							sourceURL: route.sourceURL,
+							source: route.source,
+							app: route.app
+						),
+						isActive: Binding(
+							get: { _selectedRoute != nil },
+							set: { if !$0 { _selectedRoute = nil } }
+						),
+						label: { EmptyView() }
+					)
+				}
+			}
+		)
 	}
 	
 	private func _load() {

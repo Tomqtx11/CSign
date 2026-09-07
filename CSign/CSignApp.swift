@@ -159,7 +159,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		ResetView.clearWorkCache()
 		_addDefaultCertificates()
 		_addDefaultSources()
-		_addDefaultTweaks()
 		return true
 	}
 	

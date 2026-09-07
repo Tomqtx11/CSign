@@ -121,6 +121,23 @@ struct BuiltInTweaksView: View {
 	
 	@State private var builtInURLs: [URL] = []
 	
+	let descriptions: [String: String] = [
+		"AdSkip.dylib": "Bỏ qua quảng cáo tự động.",
+		"AlwaysOnScreen.dylib": "Giữ màn hình luôn sáng, không tự tắt.",
+		"AutoKill.dylib": "Tự động tắt ứng dụng chạy ngầm/giải phóng bộ nhớ.",
+		"FixCrash.dylib": "Sửa lỗi văng ứng dụng (crash).",
+		"FixCrash1.dylib": "Sửa lỗi văng ứng dụng bổ sung (cách 1).",
+		"FixCrash2.dylib": "Sửa lỗi văng ứng dụng bổ sung (cách 2).",
+		"H5GG.dylib": "Công cụ cheat game/thay đổi giá trị bộ nhớ (Memory Editor).",
+		"LocalIAPStore14.dylib": "Bẻ khoá mua hàng trong ứng dụng (In-App Purchase) miễn phí.",
+		"LuckySpeeder_1.0.1.dylib": "Tăng giảm tốc độ game.",
+		"NoADS 2.dylib": "Chặn quảng cáo trong ứng dụng.",
+		"SatellaJailed.dylib": "Bẻ khoá mua hàng trong ứng dụng (không cần Jailbreak).",
+		"adSpeed-Noads-purchase.dylib": "Tổng hợp: Tăng tốc, chặn QC và bẻ khoá mua hàng.",
+		"adspeed.dylib": "Tăng tốc độ game và chặn quảng cáo.",
+		"autoclick.dylib": "Tự động bấm màn hình (Auto Clicker)."
+	]
+	
 	var body: some View {
 		NavigationView {
 			NBList(.localized("Built-In Tweaks")) {
@@ -130,13 +147,24 @@ struct BuiltInTweaksView: View {
 				} else {
 					ForEach(builtInURLs, id: \.absoluteString) { url in
 						Button(action: {
-							if !options.injectionFiles.contains(where: { $0.lastPathComponent == url.lastPathComponent }) {
+							if options.injectionFiles.contains(where: { $0.lastPathComponent == url.lastPathComponent }) {
+								if let idx = options.injectionFiles.firstIndex(where: { $0.lastPathComponent == url.lastPathComponent }) {
+									options.injectionFiles.remove(at: idx)
+								}
+							} else {
 								options.injectionFiles.append(url)
 							}
-							dismiss()
 						}) {
 							HStack {
-								Label(url.lastPathComponent, systemImage: "puzzlepiece")
+								VStack(alignment: .leading, spacing: 4) {
+									Label(url.lastPathComponent, systemImage: "puzzlepiece")
+										.font(.headline)
+									if let desc = descriptions[url.lastPathComponent] {
+										Text(desc)
+											.font(.caption)
+											.foregroundColor(.secondary)
+									}
+								}
 								Spacer()
 								if options.injectionFiles.contains(where: { $0.lastPathComponent == url.lastPathComponent }) {
 									Image(systemName: "checkmark")
