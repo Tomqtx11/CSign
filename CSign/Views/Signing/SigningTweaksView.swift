@@ -122,9 +122,9 @@ struct BuiltInTweaksView: View {
 	@State private var builtInURLs: [URL] = []
 	
 	let descriptions: [String: String] = [
-		"AdSkip.dylib": "Bỏ qua quảng cáo tự động.",
+		"AdSkip.dylib": "Tự động đóng quảng cáo khi truy cập app.",
 		"AlwaysOnScreen.dylib": "Giữ màn hình luôn sáng, không tự tắt.",
-		"AutoKill.dylib": "Tự động tắt ứng dụng chạy ngầm/giải phóng bộ nhớ.",
+		"AutoKill.dylib": "Dylib hẹn giờ tự động thoát App.",
 		"FixCrash.dylib": "Sửa lỗi văng ứng dụng (crash).",
 		"FixCrash1.dylib": "Sửa lỗi văng ứng dụng bổ sung (cách 1).",
 		"FixCrash2.dylib": "Sửa lỗi văng ứng dụng bổ sung (cách 2).",
@@ -134,7 +134,7 @@ struct BuiltInTweaksView: View {
 		"NoADS 2.dylib": "Chặn quảng cáo trong ứng dụng.",
 		"SatellaJailed.dylib": "Bẻ khoá mua hàng trong ứng dụng (không cần Jailbreak).",
 		"adSpeed-Noads-purchase.dylib": "Tổng hợp: Tăng tốc, chặn QC và bẻ khoá mua hàng.",
-		"adspeed.dylib": "Tăng tốc độ game và chặn quảng cáo.",
+		"adspeed.dylib": "Tăng tốc độ quảng cáo dùng mục đích xem quảng cáo nhận thưởng.",
 		"autoclick.dylib": "Tự động bấm màn hình (Auto Clicker)."
 	]
 	
