@@ -201,13 +201,13 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 	}
 	
 		private func _addDefaultSources() {
-		guard UserDefaults.standard.bool(forKey: "csign.didImportDefaultSources") == false else { return }
+		guard UserDefaults.standard.bool(forKey: "csign.didImportDefaultSources_v2") == false else { return }
 		
-		if let url = URL(string: "https://is.gd/17AE4t") {
-			Storage.shared.addSource(url, name: "CSign Repository", identifier: url.absoluteString) { _ in }
+		if let url = URL(string: "https://raw.githubusercontent.com/Tomqtx11/CSign/main/app-repo.json") {
+			Storage.shared.addSource(url, name: "Csign IPA Repo", identifier: url.absoluteString) { _ in }
 		}
 		
-		UserDefaults.standard.set(true, forKey: "csign.didImportDefaultSources")
+		UserDefaults.standard.set(true, forKey: "csign.didImportDefaultSources_v2")
 	}
 	
 	private func _addDefaultCertificates() {

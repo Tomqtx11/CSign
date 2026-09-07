@@ -1,5 +1,5 @@
 {
-  "name": "CSign Repository",
+  "name": "Csign IPA Repo",
   "identifier": "kh.crysalis.csign-repo",
   "iconURL": "https://github.com/khcrysalis/CSign/blob/v1.x/iOS/Resources/Icons/Main/Mac@3x.png?raw=true",
   "website": "https://github.com/khcrysalis/CSign",
@@ -7,7 +7,7 @@
     {
       "name": "CSign",
       "bundleIdentifier": "thewonderofyou.CSign",
-      "developerName": "Samara",
+      "developerName": "Cuios.shop",
       "iconURL": "https://github.com/khcrysalis/CSign/blob/v1.x/iOS/Resources/Icons/Main/Mac@3x.png?raw=true",
       "localizedDescription": "CSign is a free on-device iOS application manager/installer built with UIKit for quality.",
       "subtitle": "On-device signing application",

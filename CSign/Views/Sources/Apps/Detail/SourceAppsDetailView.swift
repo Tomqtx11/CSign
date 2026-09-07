@@ -18,6 +18,7 @@ struct SourceAppsDetailView: View {
 	@State var cancellable: AnyCancellable? // Combine
 	@State private var _isScreenshotPreviewPresented: Bool = false
 	@State private var _selectedScreenshotIndex: Int = 0
+	@State private var fetchedScreenshotURLs: [URL]? = nil
 	
 	var currentDownload: Download? {
 		downloadManager.getDownload(by: app.currentUniqueId)
@@ -68,7 +69,7 @@ struct SourceAppsDetailView: View {
 				_infoPills(app: app)
 				Divider()
                 
-				if let screenshotURLs = app.screenshotURLs {
+				if let screenshotURLs = fetchedScreenshotURLs ?? app.screenshotURLs {
 					NBSection(.localized("Screenshots")) {
 						_screenshots(screenshotURLs: screenshotURLs)
 					}
@@ -208,13 +209,32 @@ struct SourceAppsDetailView: View {
 			}
 		}
 		.fullScreenCover(isPresented: $_isScreenshotPreviewPresented) {
-			if let screenshotURLs = app.screenshotURLs {
+			if let screenshotURLs = fetchedScreenshotURLs ?? app.screenshotURLs {
 				ScreenshotPreviewView(
 					screenshotURLs: screenshotURLs,
 					initialIndex: _selectedScreenshotIndex
 				)
 			}
 		}
+		.onAppear {
+			if let bundleId = app.id, (app.screenshotURLs == nil || app.screenshotURLs!.isEmpty) {
+				fetchAppStoreScreenshots(bundleId: bundleId)
+			}
+		}
+	}
+	
+	private func fetchAppStoreScreenshots(bundleId: String) {
+		guard let url = URL(string: "https://itunes.apple.com/lookup?bundleId=\(bundleId)") else { return }
+		URLSession.shared.dataTask(with: url) { data, _, _ in
+			guard let data = data,
+				  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+				  let results = json["results"] as? [[String: Any]],
+				  let first = results.first,
+				  let screenshots = first["screenshotUrls"] as? [String] else { return }
+			DispatchQueue.main.async {
+				self.fetchedScreenshotURLs = screenshots.compactMap { URL(string: $0) }
+			}
+		}.resume()
 	}
 	
 	var standardIcon: some View {
