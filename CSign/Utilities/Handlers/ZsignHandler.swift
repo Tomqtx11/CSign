@@ -50,7 +50,10 @@ final class ZsignHandler {
 			p12Path: Storage.shared.getFile(.certificate, from: cert)?.path ?? "",
 			p12Password: cert.password ?? "",
 			entitlementsPath: _options.appEntitlementsFile?.path ?? "",
-			removeProvision: !_options.removeProvisioning,
+			customIdentifier: _options.appIdentifier ?? "",
+			customName: _options.appName ?? "",
+			customVersion: _options.appVersion ?? "",
+			removeProvision: _options.removeProvisioning,
 			completion: { _, error in
 				self.hadError = error
 			}
@@ -61,8 +64,11 @@ final class ZsignHandler {
 		let _ = Zsign.sign(
 			appPath: _appUrl.relativePath,
 			entitlementsPath: _options.appEntitlementsFile?.path ?? "",
+			customIdentifier: _options.appIdentifier ?? "",
+			customName: _options.appName ?? "",
+			customVersion: _options.appVersion ?? "",
 			adhoc: true,
-			removeProvision: !_options.removeProvisioning,
+			removeProvision: _options.removeProvisioning,
 			completion: { _, error in
 				self.hadError = error
 			}

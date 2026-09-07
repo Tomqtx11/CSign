@@ -109,7 +109,9 @@ class TweakHandler {
 			case "dylib":
 				try await _handleDylib(at: url)
 			case "framework":
-				let destinationURL = _app.appendingPathComponent("Frameworks").appendingPathComponent(url.lastPathComponent)
+				let frameworksDir = _app.appendingPathComponent("Frameworks")
+				try _fileManager.createDirectoryIfNeeded(at: frameworksDir)
+				let destinationURL = frameworksDir.appendingPathComponent(url.lastPathComponent)
 				try _fileManager.moveFileIfNeeded(from: url, to: destinationURL)
 				try await _handleDylib(framework: destinationURL)
 			case "bundle":
@@ -129,6 +131,7 @@ class TweakHandler {
 		// check for "/Frameworks/", then append the destinationUrl
 		if _options.injectFolder == .frameworks {
 			destinationURL = destinationURL.appendingPathComponent("Frameworks")
+			try _fileManager.createDirectoryIfNeeded(at: destinationURL)
 		}
 		
 		// We check for "@rpath" and "/Frameworks/", if they're both enabled force
