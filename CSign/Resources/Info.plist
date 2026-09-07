@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER).userTask.*</string>
@@ -9,6 +13,10 @@
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 			<key>CFBundleTypeIconFile</key>
 			<string>csign_extension</string>
 			<key>CFBundleTypeName</key>
@@ -23,6 +31,10 @@
 			</array>
 		</dict>
 		<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 			<key>CFBundleTypeIconFile</key>
 			<string>csign_extension</string>
 			<key>CFBundleTypeName</key>
@@ -39,10 +51,22 @@
 	</array>
 	<key>CFBundleIcons</key>
 	<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 		<key>CFBundleAlternateIcons</key>
 		<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 			<key>Donor</key>
 			<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 				<key>CFBundleIconFiles</key>
 				<array>
 					<string>Donor</string>
@@ -52,6 +76,10 @@
 			</dict>
 			<key>V0</key>
 			<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 				<key>CFBundleIconFiles</key>
 				<array>
 					<string>V0</string>
@@ -61,6 +89,10 @@
 			</dict>
 			<key>V1</key>
 			<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 				<key>CFBundleIconFiles</key>
 				<array>
 					<string>V1</string>
@@ -70,6 +102,10 @@
 			</dict>
 			<key>V1Mac</key>
 			<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 				<key>CFBundleIconFiles</key>
 				<array>
 					<string>V1Mac</string>
@@ -79,6 +115,10 @@
 			</dict>
 			<key>V2Mac</key>
 			<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 				<key>CFBundleIconFiles</key>
 				<array>
 					<string>V2Mac</string>
@@ -88,6 +128,10 @@
 			</dict>
 			<key>Wing</key>
 			<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 				<key>CFBundleIconFiles</key>
 				<array>
 					<string>Wing</string>
@@ -98,6 +142,10 @@
 		</dict>
 		<key>CFBundlePrimaryIcon</key>
 		<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 			<key>CFBundleIconFiles</key>
 			<array>
 				<string>AppIcon</string>
@@ -109,6 +157,10 @@
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLIconFile</key>
@@ -136,6 +188,10 @@
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>com.apple.itunes.ipa</string>
@@ -148,6 +204,10 @@
 			<string>csign_extension</string>
 			<key>UTTypeIcons</key>
 			<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 				<key>UTTypeIconText</key>
 				<string>IPA</string>
 			</dict>
@@ -155,6 +215,10 @@
 			<string>thewonderofyou.CSign.ipa</string>
 			<key>UTTypeTagSpecification</key>
 			<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 				<key>public.filename-extension</key>
 				<array>
 					<string>ipa</string>
@@ -166,6 +230,10 @@
 			</dict>
 		</dict>
 		<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>com.apple.itunes.ipa</string>
@@ -178,6 +246,10 @@
 			<string>csign_extension</string>
 			<key>UTTypeIcons</key>
 			<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 				<key>UTTypeIconBadgeName</key>
 				<string></string>
 				<key>UTTypeIconText</key>
@@ -187,6 +259,10 @@
 			<string>thewonderofyou.CSign.tipa</string>
 			<key>UTTypeTagSpecification</key>
 			<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 				<key>public.filename-extension</key>
 				<array>
 					<string>tipa</string>
@@ -200,10 +276,22 @@
 	</array>
 <key>NSAppTransportSecurity</key>
 <dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
     <key>NSExceptionDomains</key>
     <dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
         <key>claration.dev</key>
         <dict>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
             <key>NSIncludesSubdomains</key>
             <true/>
             <key>NSTemporaryExceptionAllowsInsecureHTTPLoads</key>
