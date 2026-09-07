@@ -29,7 +29,7 @@ jobs:
       - name: Extract Version
         id: get_version
         run: |
-          VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" _build/Payload/*.app/Info.plist)
+          VERSION="1.0-$(git rev-parse --short HEAD)"
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Create Release
