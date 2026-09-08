@@ -61,12 +61,41 @@ struct GuideView: View {
     
     var body: some View {
         NBNavigationView("Hướng Dẫn") {
-            ZStack {
-                WebViewWrapper(url: URL(string: "https://cuongqtx11.github.io/huongdan/")!, isLoading: $isLoading)
-                    .ignoresSafeArea(edges: .bottom)
+            VStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("⚠️ LƯU Ý QUAN TRỌNG")
+                        .font(.headline)
+                        .foregroundColor(.red)
+                        .bold()
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.bottom, 2)
+                    
+                    Group {
+                        Text("✅ Hỗ trợ mọi thiết bị iOS - cho cả iPhone và iPad.")
+                        Text("✅ Chứng chỉ cá nhân mua không thể dùng cho thiết bị khác UDID (UDID nào mua UDID đó dùng).")
+                        Text("✅ Chứng chỉ good cài không được hãy khởi động lại máy.")
+                        Text("✅ Cài ipa lỗi xác minh thì lỗi đó là do ipa lỗi hoặc do máy cũng có thể ipa không tương thích thiết bị và không phải lỗi do chứng chỉ (nếu chứng chỉ lỗi thì đồng nghĩa CSign không thể vào được nữa cho nên việc CSign vào bình thường thì không có bất kì lỗi gì từ chứng chỉ).")
+                    }
+                    .font(.subheadline)
+                    .bold()
+                    .foregroundColor(.primary)
+                }
+                .padding()
+                .background(Color.yellow.opacity(0.3))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.red, lineWidth: 2)
+                )
+                .padding([.horizontal, .top])
                 
-                if isLoading {
-                    ProgressView("Đang tải...")
+                ZStack {
+                    WebViewWrapper(url: URL(string: "https://cuongqtx11.github.io/huongdan/")!, isLoading: $isLoading)
+                        .ignoresSafeArea(edges: .bottom)
+                    
+                    if isLoading {
+                        ProgressView("Đang tải...")
+                    }
                 }
             }
         }
