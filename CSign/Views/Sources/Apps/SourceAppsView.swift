@@ -29,10 +29,10 @@ extension SourceAppsView {
 
 // MARK: - View
 struct SourceAppsView: View {
-	@AppStorage("CSign.sortOptionRawValue") private var _sortOptionRawValue: String = SortOption.name.rawValue
+	@AppStorage("CSign.sortOptionRawValue") private var _sortOptionRawValue: String = SortOption.default.rawValue
 	@AppStorage("CSign.sortAscending") private var _sortAscending: Bool = true
 	
-	@State private var _sortOption: SortOption = .name
+	@State private var _sortOption: SortOption = .default
 	@State private var _selectedRoute: SourceAppRoute?
 	
 	@State var isLoading = true
@@ -138,7 +138,7 @@ struct SourceAppsView: View {
 				_load()
 				hasLoadedOnce = true
 			}
-			_sortOption = SortOption(rawValue: _sortOptionRawValue) ?? .name
+			_sortOption = SortOption(rawValue: _sortOptionRawValue) ?? .default
 		}
 		.onChange(of: viewModel.isFinished) { _ in
 			_load()
