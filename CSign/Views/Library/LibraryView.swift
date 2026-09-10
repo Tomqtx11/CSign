@@ -103,7 +103,20 @@ struct LibraryView: View {
 							Menu {
 								_importActions()
 							} label: {
-								NBButton(.localized("Import"), style: .text)
+                                HStack {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 20))
+                                    Text(.localized("Import"))
+                                        .font(.headline)
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 12)
+                                .background(
+                                    LinearGradient(colors: [Color(hex: "#00F2FE"), Color(hex: "#4FACFE")], startPoint: .leading, endPoint: .trailing)
+                                )
+                                .cornerRadius(20)
+                                .shadow(color: Color(hex: "#00F2FE").opacity(0.4), radius: 8, x: 0, y: 4)
 							}
 						}
 					}
