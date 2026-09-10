@@ -16,14 +16,12 @@ extension SourceAppsView {
 		case `default` = "default"
 		case name
 		case date
-		case category
 		
 		var displayName: String {
 			switch self {
 			case .default:  .localized("Default")
 			case .name: 	.localized("Name")
 			case .date: 	.localized("Date")
-			case .category:	.localized("Category")
 			}
 		}
 	}
@@ -31,7 +29,7 @@ extension SourceAppsView {
 
 // MARK: - View
 struct SourceAppsView: View {
-	@AppStorage("CSign.sortOptionRawValue") private var _sortOptionRawValue: String = SortOption.category.rawValue
+	@AppStorage("CSign.sortOptionRawValue") private var _sortOptionRawValue: String = SortOption.default.rawValue
 	@AppStorage("CSign.sortAscending") private var _sortAscending: Bool = true
 	
 	@State private var _sortOption: SortOption = .default
@@ -40,6 +38,18 @@ struct SourceAppsView: View {
 	@State var isLoading = true
 	@State var hasLoadedOnce = false
 	@State private var _searchText = ""
+	@State private var _selectedCategory: String? = nil
+
+	private var _availableCategories: [String] {
+		guard let contexts = _sourceContexts else { return [] }
+		var cats = Set<String>()
+		for ctx in contexts {
+			for app in ctx.repository.apps {
+				cats.insert(app.category?.capitalized ?? String.localized("Others"))
+			}
+		}
+		return cats.sorted()
+	}
 
 	private var _navigationTitle: String {
 		if object.count == 1 {
@@ -53,6 +63,43 @@ struct SourceAppsView: View {
 	@ObservedObject var viewModel: SourcesViewModel
 	@State private var _sourceContexts: [SourceRepositoryContext]?
 	
+	@ViewBuilder
+	private var _categoryScrollView: some View {
+		let cats = _availableCategories
+		if !cats.isEmpty {
+			ScrollView(.horizontal, showsIndicators: false) {
+				HStack(spacing: 10) {
+					Button(action: {
+						withAnimation { _selectedCategory = nil }
+					}) {
+						Text(.localized("All"))
+							.padding(.horizontal, 16)
+							.padding(.vertical, 8)
+							.background(_selectedCategory == nil ? Color.accentColor : Color(.secondarySystemFill))
+							.foregroundColor(_selectedCategory == nil ? .white : .primary)
+							.cornerRadius(20)
+					}
+					
+					ForEach(cats, id: \.self) { cat in
+						Button(action: {
+							withAnimation { _selectedCategory = cat }
+						}) {
+							Text(cat)
+								.padding(.horizontal, 16)
+								.padding(.vertical, 8)
+								.background(_selectedCategory == cat ? Color.accentColor : Color(.secondarySystemFill))
+								.foregroundColor(_selectedCategory == cat ? .white : .primary)
+								.cornerRadius(20)
+						}
+					}
+				}
+				.padding(.horizontal)
+				.padding(.vertical, 8)
+			}
+			.background(Color(.systemBackground))
+		}
+	}
+
 	// MARK: Body
 	var body: some View {
 		ZStack {
@@ -60,13 +107,17 @@ struct SourceAppsView: View {
 				let _sourceContexts,
 				!_sourceContexts.isEmpty
 			{
-				SourceAppsTableRepresentableView(
-					sourceContexts: _sourceContexts,
-					searchText: $_searchText,
-					sortOption: $_sortOption,
-					sortAscending: $_sortAscending,
-					onSelect: {self._selectedRoute = $0}
-				)
+				VStack(spacing: 0) {
+					_categoryScrollView
+					SourceAppsTableRepresentableView(
+						sourceContexts: _sourceContexts,
+						searchText: $_searchText,
+						selectedCategory: $_selectedCategory,
+						sortOption: $_sortOption,
+						sortAscending: $_sortAscending,
+						onSelect: {self._selectedRoute = $0}
+					)
+				}
 				.ignoresSafeArea()
 			} else {
 				ProgressView()

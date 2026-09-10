@@ -12,6 +12,8 @@ import AltSourceKit
 struct SourceAppsTableRepresentableView: UIViewRepresentable {
 	var sourceContexts: [SourceAppsView.SourceRepositoryContext]
 	@Binding var searchText: String
+	var selectedCategory: String?
+	@Binding var selectedCategory: String?
 	@Binding var sortOption: SourceAppsView.SortOption
 	@Binding var sortAscending: Bool
 	var onSelect: (SourceAppsView.SourceAppRoute) -> Void
@@ -57,15 +59,17 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 		
 		let sourcesChanged = context.coordinator.sourceContexts != sourceContexts
 		let searchChanged = context.coordinator.searchText != searchText
+		let categoryChanged = context.coordinator.selectedCategory != selectedCategory
 		let sortOptionChanged = context.coordinator.sortOption != sortOption
 		let sortDirectionChanged = context.coordinator.sortAscending != sortAscending
 		
 		context.coordinator.sourceContexts = sourceContexts
 		context.coordinator.searchText = searchText
+		context.coordinator.selectedCategory = selectedCategory
 		context.coordinator.sortOption = sortOption
 		context.coordinator.sortAscending = sortAscending
 		
-		if sourcesChanged || searchChanged || sortOptionChanged || sortDirectionChanged {
+		if sourcesChanged || searchChanged || categoryChanged || sortOptionChanged || sortDirectionChanged {
 			context.coordinator.invalidateCache()
 		}
 	}
@@ -74,6 +78,7 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 		Coordinator(
 			sourceContexts: sourceContexts,
 			searchText: searchText,
+			selectedCategory: selectedCategory,
 			sortOption: sortOption,
 			sortAscending: sortAscending,
 			onSelect: onSelect
@@ -85,6 +90,7 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITableViewDataSource, UITableViewDelegate {
 	var sourceContexts: [SourceAppsView.SourceRepositoryContext]
 	var searchText: String
+	var selectedCategory: String?
 	var sortOption: SourceAppsView.SortOption
 	var sortAscending: Bool
 	let onSelect: (SourceAppsView.SourceAppRoute) -> Void
@@ -120,12 +126,14 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 	init(
 		sourceContexts: [SourceAppsView.SourceRepositoryContext],
 		searchText: String,
+		selectedCategory: String?,
 		sortOption: SourceAppsView.SortOption,
 		sortAscending: Bool,
 		onSelect: @escaping (SourceAppsView.SourceAppRoute) -> Void
 	) {
 		self.sourceContexts = sourceContexts
 		self.searchText = searchText
+		self.selectedCategory = selectedCategory
 		self.sortOption = sortOption
 		self.sortAscending = sortAscending
 		self.onSelect = onSelect
@@ -137,13 +145,36 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 	}
 	
 	private func _calculateSortedApps() -> [SourceAppEntry] {
-		let filtered = _allAppsWithSource.filter {
-			searchText.isEmpty ||
-			($0.app.id?.range(of: searchText, options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US")) != nil) ||
-				($0.app.name?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-				($0.app.description?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-				($0.app.subtitle?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-				($0.app.localizedDescription?.localizedCaseInsensitiveContains(searchText) ?? false)
+		var filtered = _allAppsWithSource.filter { entry in
+			let matchesSearch = searchText.isEmpty ||
+				(entry.app.id?.range(of: searchText, options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US")) != nil) ||
+				(entry.app.name?.localizedCaseInsensitiveContains(searchText) ?? false) ||
+				(entry.app.description?.localizedCaseInsensitiveContains(searchText) ?? false) ||
+				(entry.app.subtitle?.localizedCaseInsensitiveContains(searchText) ?? false) ||
+				(entry.app.localizedDescription?.localizedCaseInsensitiveContains(searchText) ?? false)
+			
+			let appCat = entry.app.category?.capitalized ?? String.localized("Others")
+			let matchesCategory = selectedCategory == nil || appCat == selectedCategory
+			
+			return matchesSearch && matchesCategory
+		}
+		
+		// Lọc chỉ hiển thị 1 version mới nhất khi không dùng thanh tìm kiếm
+		if searchText.isEmpty {
+			var uniqueApps: [String: SourceAppEntry] = [:]
+			for entry in filtered {
+				let key = entry.app.bundleIdentifier ?? entry.app.name ?? UUID().uuidString
+				if let existing = uniqueApps[key] {
+					let existingDate = existing.app.currentDate?.date ?? .distantPast
+					let newDate = entry.app.currentDate?.date ?? .distantPast
+					if newDate > existingDate {
+						uniqueApps[key] = entry
+					}
+				} else {
+					uniqueApps[key] = entry
+				}
+			}
+			filtered = Array(uniqueApps.values)
 		}
 		
 		switch sortOption {
@@ -192,22 +223,6 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 				return sortAscending ? $0 < $1 : $0 > $1
 			})
 			return sorted
-		case .category:
-			let sorted = filtered.sorted {
-				let n1 = $0.app.name ?? ""
-				let n2 = $1.app.name ?? ""
-				let comparison = n1.localizedCaseInsensitiveCompare(n2) == .orderedAscending
-				return sortAscending ? comparison : !comparison
-			}
-			_groupedAppsByCategory = Dictionary(grouping: sorted) {
-				$0.app.category?.capitalized ?? String.localized("Others")
-			}
-			_sortedSectionTitles = _groupedAppsByCategory.keys.sorted(by: {
-				let other = String.localized("Others")
-				if $0 == other { return false }
-				if $1 == other { return true }
-				return sortAscending ? $0 < $1 : $0 > $1
-			})
 			return sorted
 		}
 	}
@@ -226,7 +241,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 	func numberOfSections(in tableView: UITableView) -> Int {
 		switch sortOption {
 		case .default: 1
-		case .name, .date, .category: _sortedSectionTitles.count
+		case .name, .date: _sortedSectionTitles.count
 		}
 	}
 	
@@ -235,7 +250,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 		case .default: _sortedApps.count
 		case .name: _groupedAppsByNameFirstLetter[_sortedSectionTitles[section]]?.count ?? 0
 		case .date: _groupedAppsByDate[_sortedSectionTitles[section]]?.count ?? 0
-		case .category: _groupedAppsByCategory[_sortedSectionTitles[section]]?.count ?? 0
+
 		}
 	}
 	
@@ -246,7 +261,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 		case .default: entry = _sortedApps[indexPath.row]
 		case .name: entry = _groupedAppsByNameFirstLetter[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
 		case .date: entry = _groupedAppsByDate[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
-		case .category: entry = _groupedAppsByCategory[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
+
 		}
 
 		cell.contentConfiguration = UIHostingConfiguration {
@@ -263,7 +278,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 		case .default: entry = _sortedApps[indexPath.row]
 		case .name: entry = _groupedAppsByNameFirstLetter[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
 		case .date: entry = _groupedAppsByDate[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
-		case .category: entry = _groupedAppsByCategory[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
+
 		}
 		
 		onSelect(SourceAppsView.SourceAppRoute(sourceURL: entry.sourceURL, source: entry.source, app: entry.app))
@@ -275,7 +290,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 		
 		switch sortOption {
 		case .default: title = .localized("%lld Apps", arguments: _sortedApps.count)
-		case .name, .date, .category: title = _sortedSectionTitles[section]
+		case .name, .date: title = _sortedSectionTitles[section]
 		}
 		
 		headerView?.contentConfiguration = UIHostingConfiguration {
@@ -304,7 +319,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 		case .default: entry = _sortedApps[indexPath.row]
 		case .name: entry = _groupedAppsByNameFirstLetter[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
 		case .date: entry = _groupedAppsByDate[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
-		case .category: entry = _groupedAppsByCategory[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
+
 		}
 		
 		return UIContextMenuConfiguration(

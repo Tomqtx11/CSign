@@ -38,6 +38,7 @@ struct AppearanceView: View {
 		)
 	}
 	
+	@State private var showingIconAlert = false
 	@State private var _currentIcon: String = UIApplication.shared.alternateIconName ?? "Default"
 	private let _appIcons: [(name: String, image: String)] = [
 		("Default", "Glyph"),
@@ -99,6 +100,9 @@ struct AppearanceView: View {
 						if let error = error {
 							print(error.localizedDescription)
 						}
+						DispatchQueue.main.async {
+							showingIconAlert = true
+						}
 					}
 				}
 			}
@@ -127,6 +131,12 @@ struct AppearanceView: View {
 				.labelsHidden()
 				.pickerStyle(.inline)
 			}
+		}
+		.alert(.localized("Khởi động lại ứng dụng"), isPresented: $showingIconAlert) {
+			Button(.localized("Thoát ngay"), role: .destructive) { exit(0) }
+			Button(.localized("Để sau"), role: .cancel) { }
+		} message: {
+			Text(.localized("Để thay đổi biểu tượng ứng dụng có hiệu lực hoàn toàn (đặc biệt khi cài qua TrollStore hoặc sideload), vui lòng khởi động lại ứng dụng."))
 		}
 		.onChange(of: _userIntefacerStyle) { value in
 			if let style = UIUserInterfaceStyle(rawValue: value) {
