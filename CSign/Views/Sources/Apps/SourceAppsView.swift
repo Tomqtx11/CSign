@@ -125,7 +125,7 @@ struct SourceAppsView: View {
 		}
 		.navigationTitle(_navigationTitle)
 		.searchable(text: $_searchText, placement: .platform())
-
+		.toolbar {
 			NBToolbarMenu(
 				systemImage: "line.3.horizontal.decrease",
 				style: .icon,
