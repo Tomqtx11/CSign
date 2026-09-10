@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UserNotifications
 import Combine
 import UIKit.UIImpactFeedbackGenerator
 import BackgroundTasks
@@ -24,6 +25,8 @@ class Download: Identifiable, @unchecked Sendable {
 	
 	var task: URLSessionDownloadTask?
 	var resumeData: Data?
+	var lastNotifiedProgress: Double = 0.0
+
 	
 	let id: String
 	let url: URL
@@ -57,6 +60,25 @@ class DownloadManager: NSObject, ObservableObject {
 	private var _session: URLSession!
 	
 	#if !targetEnvironment(macCatalyst)
+		private func _sendBackgroundNotification(title: String, body: String, id: String = "background_dl") {
+		if UIApplication.shared.applicationState != .active {
+			let content = UNMutableNotificationContent()
+			content.title = title
+			content.body = body
+			let request = UNNotificationRequest(identifier: id, content: content, trigger: nil)
+			UNUserNotificationCenter.current().add(request)
+		}
+	}
+	
+	func updateDownloadNotification(dl: Download) {
+		let currentProgress = dl.overallProgress
+		if currentProgress - dl.lastNotifiedProgress >= 0.1 || currentProgress == 1.0 {
+			dl.lastNotifiedProgress = currentProgress
+			let percent = Int(currentProgress * 100)
+			_sendBackgroundNotification(title: "CSign", body: "Đang tải xuống/xử lý: \(dl.fileName) (\(percent)%)", id: dl.id)
+		}
+	}
+
 	private func _updateBackgroundAudioState() {
 		if #unavailable(iOS 26.0){
 			if !downloads.isEmpty {
@@ -184,6 +206,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
 			
 			DispatchQueue.main.async {
 				if let index = DownloadManager.shared.getDownloadIndex(by: dl.id) {
+					self._sendBackgroundNotification(title: "Hoàn tất", body: "Đã xử lý xong: \(dl.fileName)", id: dl.id)
 					DownloadManager.shared.downloads.remove(at: index)
 					
 					#if !targetEnvironment(macCatalyst)
@@ -229,6 +252,8 @@ extension DownloadManager: URLSessionDownloadDelegate {
 			: 0
 			download.bytesDownloaded = totalBytesWritten
 			download.totalBytes = totalBytesExpectedToWrite
+			
+			self.updateDownloadNotification(dl: download)
 			
 			#if !targetEnvironment(macCatalyst)
 			if #available(iOS 26.0, *) {

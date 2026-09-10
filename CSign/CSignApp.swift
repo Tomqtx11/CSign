@@ -61,11 +61,7 @@ struct CSignApp: App {
 							backgroundTask = .invalid
 						}
 						
-						let content = UNMutableNotificationContent()
-						content.title = "CSign"
-						content.body = "Đang tiếp tục tải xuống/xử lý file ở chế độ nền..."
-						let request = UNNotificationRequest(identifier: "background_dl", content: content, trigger: nil)
-						UNUserNotificationCenter.current().add(request)
+
 					}
 				} else if newPhase == .active {
 					if backgroundTask != .invalid {
