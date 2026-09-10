@@ -16,12 +16,14 @@ extension SourceAppsView {
 		case `default` = "default"
 		case name
 		case date
+		case category
 		
 		var displayName: String {
 			switch self {
 			case .default:  .localized("Default")
 			case .name: 	.localized("Name")
 			case .date: 	.localized("Date")
+			case .category:	.localized("Category")
 			}
 		}
 	}
@@ -29,7 +31,7 @@ extension SourceAppsView {
 
 // MARK: - View
 struct SourceAppsView: View {
-	@AppStorage("CSign.sortOptionRawValue") private var _sortOptionRawValue: String = SortOption.default.rawValue
+	@AppStorage("CSign.sortOptionRawValue") private var _sortOptionRawValue: String = SortOption.category.rawValue
 	@AppStorage("CSign.sortAscending") private var _sortAscending: Bool = true
 	
 	@State private var _sortOption: SortOption = .default

@@ -9,6 +9,7 @@ import SwiftUI
 import Nuke
 import IDeviceSwift
 import OSLog
+import UserNotifications
 
 @main
 struct CSignApp: App {
@@ -20,6 +21,9 @@ struct CSignApp: App {
 	let storage = Storage.shared
 	@AppStorage("hasAcceptedDisclaimer") private var hasAcceptedDisclaimer = false
 	
+	@Environment(\.scenePhase) var scenePhase
+	@State private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+
 	var body: some Scene {
 		WindowGroup {
 			VStack {
@@ -48,6 +52,28 @@ struct CSignApp: App {
 				UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "CSign.userTintColor") ?? "#848ef9"))
 			}
 			
+			
+			.onChange(of: scenePhase) { newPhase in
+				if newPhase == .background {
+					if downloadManager.downloads.count > 0 {
+						backgroundTask = UIApplication.shared.beginBackgroundTask {
+							UIApplication.shared.endBackgroundTask(backgroundTask)
+							backgroundTask = .invalid
+						}
+						
+						let content = UNMutableNotificationContent()
+						content.title = "CSign"
+						content.body = "Đang tiếp tục tải xuống/xử lý file ở chế độ nền..."
+						let request = UNNotificationRequest(identifier: "background_dl", content: content, trigger: nil)
+						UNUserNotificationCenter.current().add(request)
+					}
+				} else if newPhase == .active {
+					if backgroundTask != .invalid {
+						UIApplication.shared.endBackgroundTask(backgroundTask)
+						backgroundTask = .invalid
+					}
+				}
+			}
 			.fullScreenCover(isPresented: Binding(get: { !hasAcceptedDisclaimer }, set: { _ in })) {
 				DisclaimerView(hasAcceptedDisclaimer: $hasAcceptedDisclaimer)
 			}
@@ -154,6 +180,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		_ application: UIApplication,
 		didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
 	) -> Bool {
+		UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
 		_createPipeline()
 		_createDocumentsDirectories()
 		ResetView.clearWorkCache()
@@ -205,9 +232,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		if let url = URL(string: urlStr) {
 			if let existing = Storage.shared.getSources().first(where: { $0.sourceURL?.absoluteString == urlStr }) {
 				existing.name = "CSign IPA Repo"
+				existing.iconURL = URL(string: "https://apptesters.org/apptesters-512x512.png")
 				Storage.shared.saveContext()
 			} else {
-				Storage.shared.addSource(url, name: "CSign IPA Repo", identifier: url.absoluteString) { _ in }
+				Storage.shared.addSource(url, name: "CSign IPA Repo", identifier: url.absoluteString, iconURL: URL(string: "https://apptesters.org/apptesters-512x512.png")) { _ in }
 			}
 		}
 		
