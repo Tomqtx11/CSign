@@ -161,7 +161,7 @@ struct LibraryView: View {
 					.presentationDragIndicator(.visible)
 			}
 			.fullScreenCover(item: $_selectedSigningAppPresenting) { app in
-				SigningView(app: app.base)
+				SigningView(app: app.base, restoredOptions: app.restoredOptions)
 					.compatNavigationTransition(id: app.base.uuid ?? "", ns: _namespace)
 			}
 			.sheet(isPresented: $_isImportingPresenting) {

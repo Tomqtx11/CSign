@@ -87,12 +87,13 @@ struct LibraryCellView: View {
 			if isEditing {
 				_toggleSelection()
 			} else if app.isSigned {
+                var loadedOptions: Options? = nil
 				if let uuid = app.uuid,
 				   let data = UserDefaults.standard.data(forKey: "csign_options_\(uuid)"),
 				   let savedOptions = try? JSONDecoder().decode(Options.self, from: data) {
-					OptionsManager.shared.options = savedOptions
+					loadedOptions = savedOptions
 				}
-				selectedSigningAppPresenting = AnyApp(base: app)
+				selectedSigningAppPresenting = AnyApp(base: app, restoredOptions: loadedOptions)
 			}
 		}
 		.swipeActions {
@@ -198,7 +199,13 @@ extension LibraryCellView {
 				selectedInstallAppPresenting = AnyApp(base: app)
 			}
 			Button(.localized("Re-sign"), systemImage: "signature") {
-				selectedSigningAppPresenting = AnyApp(base: app)
+                var loadedOptions: Options? = nil
+				if let uuid = app.uuid,
+				   let data = UserDefaults.standard.data(forKey: "csign_options_\(uuid)"),
+				   let savedOptions = try? JSONDecoder().decode(Options.self, from: data) {
+					loadedOptions = savedOptions
+				}
+				selectedSigningAppPresenting = AnyApp(base: app, restoredOptions: loadedOptions)
 			}
 			Button(.localized("Export"), systemImage: "square.and.arrow.up") {
 				selectedInstallAppPresenting = AnyApp(base: app, archive: true)

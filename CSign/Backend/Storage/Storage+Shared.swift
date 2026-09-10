@@ -46,6 +46,7 @@ extension Storage {
 struct AnyApp: Identifiable {
 	let base: AppInfoPresentable
 	var archive: Bool = false
+	var restoredOptions: Options? = nil
 	
 	var id: String {
 		base.uuid ?? UUID().uuidString

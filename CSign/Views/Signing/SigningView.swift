@@ -37,10 +37,16 @@ struct SigningView: View {
 	
 	var app: AppInfoPresentable
 	
-	init(app: AppInfoPresentable) {
+	init(app: AppInfoPresentable, restoredOptions: Options? = nil) {
 		self.app = app
 		let storedCert = UserDefaults.standard.integer(forKey: "csign.selectedCert")
 		__temporaryCertificate = State(initialValue: storedCert)
+        
+        if let restoredOptions = restoredOptions {
+            __temporaryOptions = State(initialValue: restoredOptions)
+        } else {
+            __temporaryOptions = State(initialValue: OptionsManager.shared.options)
+        }
 	}
 		
 	// MARK: Body
