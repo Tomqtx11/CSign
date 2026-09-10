@@ -346,12 +346,6 @@ extension SigningView {
 			} else {
                 let successFeedback = UINotificationFeedbackGenerator()
                 successFeedback.notificationOccurred(.success)
-                
-                HistoryManager.shared.addHistory(
-                    appName: _temporaryOptions.appName ?? app.name ?? "Unknown App",
-                    appIdentifier: _temporaryOptions.appIdentifier ?? app.identifier ?? "unknown.id",
-                    options: _temporaryOptions
-                )
 
 				if
 					_temporaryOptions.post_deleteAppAfterSigned,

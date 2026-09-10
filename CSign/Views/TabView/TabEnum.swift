@@ -70,104 +70,109 @@ enum TabEnum: String, CaseIterable, Hashable {
 
 // MARK: - History Feature
 
-struct SignedHistoryItem: Codable, Identifiable, Equatable {
-    var id: UUID = UUID()
-    var appName: String
-    var appIdentifier: String
-    var dateSigned: Date
-    var options: Options
-}
-
-class HistoryManager: ObservableObject {
-    static let shared = HistoryManager()
-    
-    @Published var history: [SignedHistoryItem] = []
-    private let _key = "csign_signing_history"
-    
-    init() {
-        if let data = UserDefaults.standard.data(forKey: _key),
-           let saved = try? JSONDecoder().decode([SignedHistoryItem].self, from: data) {
-            self.history = saved
-        }
-    }
-    
-    func saveHistory() {
-        if let encoded = try? JSONEncoder().encode(history) {
-            UserDefaults.standard.set(encoded, forKey: _key)
-        }
-    }
-    
-    func addHistory(appName: String, appIdentifier: String, options: Options) {
-        let item = SignedHistoryItem(appName: appName, appIdentifier: appIdentifier, dateSigned: Date(), options: options)
-        DispatchQueue.main.async {
-            self.history.insert(item, at: 0)
-            self.saveHistory()
-        }
-    }
-    
-    func removeHistory(at offsets: IndexSet) {
-        DispatchQueue.main.async {
-            self.history.remove(atOffsets: offsets)
-            self.saveHistory()
-        }
-    }
-    
-    func clearHistory() {
-        DispatchQueue.main.async {
-            self.history.removeAll()
-            self.saveHistory()
-        }
-    }
-}
-
 struct HistoryView: View {
-    @StateObject private var historyManager = HistoryManager.shared
-    @State private var showingApplyAlert = false
+    @StateObject var downloadManager = DownloadManager.shared
+    @StateObject var updateManager = UpdateManager.shared
+    
+    @State private var _selectedInfoAppPresenting: AnyApp?
+    @State private var _selectedSigningAppPresenting: AnyApp?
+    @State private var _selectedInstallAppPresenting: AnyApp?
+    @State private var _selectedAppUUIDs: Set<String> = []
+    @State private var _editMode: EditMode = .inactive
+    @State private var _searchText = ""
+    @Namespace private var _namespace
+    
+    @FetchRequest(
+        entity: Signed.entity(),
+        sortDescriptors: [NSSortDescriptor(keyPath: \Signed.date, ascending: false)],
+        animation: .snappy
+    ) private var _signedApps: FetchedResults<Signed>
+    
+    private var _filteredSignedApps: [Signed] {
+        _signedApps.filter {
+            _searchText.isEmpty ||
+                (($0.value(forKey: "name") as? String)?.localizedCaseInsensitiveContains(_searchText) ?? false)
+        }
+    }
     
     var body: some View {
         NBNavigationView(.localized("Lịch sử Ký")) {
-            if historyManager.history.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "clock.badge.exclamationmark")
-                        .font(.system(size: 50))
-                        .foregroundColor(.gray)
-                    Text(.localized("Chưa có lịch sử ký nào."))
-                        .foregroundColor(.gray)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                List {
-                    ForEach(historyManager.history) { item in
-                        Button {
-                            OptionsManager.shared.options = item.options
-                            OptionsManager.shared.saveOptions()
-                            showingApplyAlert = true
-                            
-                            let generator = UINotificationFeedbackGenerator()
-                            generator.notificationOccurred(.success)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(item.appName)
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                                Text(item.appIdentifier)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                Text(item.dateSigned.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            }
-                            .padding(.vertical, 4)
+            NBListAdaptable {
+                if !_filteredSignedApps.isEmpty {
+                    NBSection(
+                        .localized("Signed"),
+                        secondary: _filteredSignedApps.count.description
+                    ) {
+                        ForEach(_filteredSignedApps, id: \.uuid) { app in
+                            LibraryCellView(
+                                app: app,
+                                selectedInfoAppPresenting: $_selectedInfoAppPresenting,
+                                selectedSigningAppPresenting: $_selectedSigningAppPresenting,
+                                selectedInstallAppPresenting: $_selectedInstallAppPresenting,
+                                selectedAppUUIDs: $_selectedAppUUIDs
+                            )
+                            .compatMatchedTransitionSource(id: app.uuid ?? "", ns: _namespace)
                         }
                     }
-                    .onDelete(perform: historyManager.removeHistory)
+                }
+            }
+            .searchable(text: $_searchText, placement: .platform())
+            .scrollDismissesKeyboard(.interactively)
+            .overlay {
+                if _filteredSignedApps.isEmpty {
+                    if #available(iOS 17, *) {
+                        ContentUnavailableView {
+                            Label(.localized("Chưa có lịch sử ký nào."), systemImage: "clock.badge.exclamationmark")
+                        } description: {
+                            Text(.localized("Khi bạn ký một ứng dụng, nó sẽ xuất hiện ở đây cùng với toàn bộ cấu hình đã chọn."))
+                        }
+                    }
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    EditButton()
+                }
+                
+                if _editMode.isEditing {
+                    NBToolbarButton(
+                        .localized("Delete"),
+                        systemImage: "trash",
+                        isDisabled: _selectedAppUUIDs.isEmpty
+                    ) {
+                        _bulkDeleteSelectedApps()
+                    }
+                }
+            }
+            .environment(\.editMode, $_editMode)
+            .sheet(item: $_selectedInfoAppPresenting) { app in
+                LibraryInfoView(app: app.base)
+            }
+            .sheet(item: $_selectedInstallAppPresenting) { app in
+                InstallPreviewView(app: app.base, isSharing: app.archive)
+                    .presentationDetents([.height(200)])
+                    .presentationDragIndicator(.visible)
+            }
+            .fullScreenCover(item: $_selectedSigningAppPresenting) { app in
+                SigningView(app: app.base)
+                    .compatNavigationTransition(id: app.base.uuid ?? "", ns: _namespace)
+            }
+            .onChange(of: _editMode) { mode in
+                if mode == .inactive {
+                    _selectedAppUUIDs.removeAll()
                 }
             }
         }
-        .alert(.localized("Đã áp dụng cấu hình"), isPresented: $showingApplyAlert) {
-            Button(.localized("OK"), role: .cancel) { }
-        } message: {
-            Text(.localized("Cấu hình ký của ứng dụng này đã được khôi phục. Bạn có thể chọn một file IPA mới để tiếp tục với các tuỳ chỉnh này."))
+    }
+    
+    private func _bulkDeleteSelectedApps() {
+        let selectedApps = _filteredSignedApps.filter { app in
+            guard let uuid = app.uuid else { return false }
+            return _selectedAppUUIDs.contains(uuid)
         }
+        for app in selectedApps {
+            Storage.shared.deleteApp(for: app)
+        }
+        _selectedAppUUIDs.removeAll()
     }
 }

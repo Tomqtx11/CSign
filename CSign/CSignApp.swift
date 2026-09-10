@@ -159,9 +159,30 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		ResetView.clearWorkCache()
 		_addDefaultCertificates()
 		_addDefaultSources()
+        _setupPremiumAppearance()
 		return true
 	}
 	
+    private func _setupPremiumAppearance() {
+        if #available(iOS 15.0, *) {
+            let appearance = UITabBarAppearance()
+            appearance.configureWithTransparentBackground()
+            appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+            UITabBar.appearance().standardAppearance = appearance
+            UITabBar.appearance().scrollEdgeAppearance = appearance
+            
+            let navAppearance = UINavigationBarAppearance()
+            navAppearance.configureWithTransparentBackground()
+            navAppearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+            UINavigationBar.appearance().standardAppearance = navAppearance
+            UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
+            
+            // For OLED deep black background
+            UITableView.appearance().backgroundColor = .clear
+            UICollectionView.appearance().backgroundColor = .clear
+        }
+    }
+    
 	private func _createPipeline() {
 		DataLoader.sharedUrlCache.diskCapacity = 0
 		

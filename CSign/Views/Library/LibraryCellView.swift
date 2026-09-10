@@ -86,6 +86,13 @@ struct LibraryCellView: View {
 		.onTapGesture {
 			if isEditing {
 				_toggleSelection()
+			} else if app.isSigned {
+				if let uuid = app.uuid,
+				   let data = UserDefaults.standard.data(forKey: "csign_options_\(uuid)"),
+				   let savedOptions = try? JSONDecoder().decode(Options.self, from: data) {
+					OptionsManager.shared.options = savedOptions
+				}
+				selectedSigningAppPresenting = AnyApp(base: app)
 			}
 		}
 		.swipeActions {

@@ -173,6 +173,10 @@ final class SigningHandler: NSObject {
 			to: _uuid,
 			kind: .signed
 		)
+        
+        if let encoded = try? JSONEncoder().encode(_options) {
+            UserDefaults.standard.set(encoded, forKey: "csign_options_\(_uuid)")
+        }
 	}
 	
 	private func _directory() async throws -> URL {
