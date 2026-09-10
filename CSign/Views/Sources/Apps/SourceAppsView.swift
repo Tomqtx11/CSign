@@ -118,7 +118,6 @@ struct SourceAppsView: View {
 						onSelect: {self._selectedRoute = $0}
 					)
 				}
-				.ignoresSafeArea()
 			} else {
 				ProgressView()
 			}
