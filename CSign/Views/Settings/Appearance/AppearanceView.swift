@@ -64,6 +64,26 @@ struct AppearanceView: View {
 				)
 			}
 			
+			NBSection(.localized("App Icon")) {
+				Picker(.localized("App Icon"), selection: Binding(
+					get: { UIApplication.shared.alternateIconName ?? "Default" },
+					set: { newValue in
+						let iconName: String? = newValue == "Default" ? nil : newValue
+						UIApplication.shared.setAlternateIconName(iconName) { error in
+							if let error = error {
+								print(error.localizedDescription)
+							}
+						}
+					}
+				)) {
+					Text("Default").tag("Default")
+					Text("Cyberpunk").tag("Cyberpunk")
+					Text("Hacker").tag("Hacker")
+				}
+				.pickerStyle(.inline)
+				.labelsHidden()
+			}
+			
 			if #available(iOS 18.0, *) {
 				NBSection(.localized("Library")) {
 					Toggle(.localized("Dynamic Icons"), isOn: $_shouldChangeIconsBasedOffStyle)

@@ -104,25 +104,10 @@ struct SigningView: View {
 							Button {
 								_start()
 							} label: {
-                                HStack {
-                                    Image(systemName: "signature")
-                                        .font(.system(size: 20, weight: .bold))
-                                    Text(.localized("Start Signing"))
-                                        .font(.headline.bold())
-                                }
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(
-                                    LinearGradient(colors: [Color(hex: "#FF007F"), Color(hex: "#848ef9")], startPoint: .leading, endPoint: .trailing)
-                                )
-                                .cornerRadius(16)
-                                .shadow(color: Color(hex: "#FF007F").opacity(0.5), radius: 10, x: 0, y: 5)
-                                .padding(.horizontal, 24)
+								NBSheetButton(title: .localized("Start Signing"), style: .prominent)
+									.padding()
 							}
 							.buttonStyle(.plain)
-                            .scaleEffect(_isSigning ? 0.95 : 1.0)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: _isSigning)
 							.offset(y: UIDevice.current.userInterfaceIdiom == .pad ? -20 : -40)
 						}
 				}

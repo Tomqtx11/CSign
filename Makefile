@@ -55,6 +55,7 @@ $(PLATFORMS): deps
 	cp BuiltInCert/* _build/Payload/CSign.app/signing-assets/DefaultCert/ 2>/dev/null || true
 	mkdir -p _build/Payload/CSign.app/BuiltInTweaks
 	cp BuiltInTweaks/* _build/Payload/CSign.app/BuiltInTweaks/ 2>/dev/null || true
+	cp CustomIcons/* _build/Payload/CSign.app/ 2>/dev/null || true
 
 	mkdir -p packages
 
