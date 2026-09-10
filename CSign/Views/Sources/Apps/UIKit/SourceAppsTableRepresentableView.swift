@@ -344,7 +344,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 				}, image: UIImage(systemName: "arrow.down"))
 			)
 			
-			return UIMenu(children: [downloadsMenu, versionsMenu])
+			return UIMenu(children: [downloadsMenu])
 		}
 	}
 	
