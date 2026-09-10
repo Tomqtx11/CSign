@@ -326,14 +326,6 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 			identifier: nil,
 			previewProvider: nil
 		) { _ in
-			let versionsMenu = UIMenu(
-				title: .localized("Copy Download URLs"),
-				image: UIImage(systemName: "list.bullet"),
-				children: self._contextActions(for: entry.app, with: { _, url in
-					UIPasteboard.general.string = url?.absoluteString
-				}, image: UIImage(systemName: "doc.on.clipboard"))
-			)
-			
 			let downloadsMenu = UIMenu(
 				title: .localized("Previous Versions"),
 				image: UIImage(systemName: "square.and.arrow.down.on.square"),
