@@ -1,0 +1,16 @@
+﻿2026-09-10T21:09:28.6654650Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-09-10T21:09:28.6655900Z Post job cleanup.
+2026-09-10T21:09:29.4256830Z [command]/opt/homebrew/bin/git version
+2026-09-10T21:09:29.4857830Z git version 2.55.0
+2026-09-10T21:09:29.5388910Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/efc981a8-383a-4506-8a7f-925445f83082/.gitconfig'
+2026-09-10T21:09:29.5492470Z Temporarily overriding HOME='/Users/runner/work/_temp/efc981a8-383a-4506-8a7f-925445f83082' before making global git config changes
+2026-09-10T21:09:29.5598480Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-10T21:09:29.5701840Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/CSign/CSign
+2026-09-10T21:09:29.6009350Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-10T21:09:29.6324580Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-10T21:09:29.8577770Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-10T21:09:29.8682220Z http.https://github.com/.extraheader
+2026-09-10T21:09:29.8997050Z [command]/opt/homebrew/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-09-10T21:09:29.9305700Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-10T21:09:30.2800450Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-09-10T21:09:30.3107220Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url

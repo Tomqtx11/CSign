@@ -1,0 +1,48 @@
+﻿2026-09-10T21:04:17.6442410Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-09-10T21:04:17.6455430Z ##[group]Run actions/cache@v4
+2026-09-10T21:04:17.6456400Z with:
+2026-09-10T21:04:17.6457120Z   path: SourcePackages
+2026-09-10T21:04:17.6458070Z   key: macOS-spm-a28cfd61565949306975d0fa81bfcfea0ce73fc1e970ad418a47eb7fce91c7f0
+2026-09-10T21:04:17.6459330Z   restore-keys: macOS-spm-
+2026-09-10T21:04:17.6460090Z   enableCrossOsArchive: false
+2026-09-10T21:04:17.6460980Z   fail-on-cache-miss: false
+2026-09-10T21:04:17.6461760Z   lookup-only: false
+2026-09-10T21:04:17.6462330Z   save-always: false
+2026-09-10T21:04:17.6462940Z env:
+2026-09-10T21:04:17.6464260Z   MD_APPLE_SDK_ROOT: /Applications/Xcode_26.6.app
+2026-09-10T21:04:17.6464750Z ##[endgroup]
+2026-09-10T21:04:17.8755830Z (node:1541) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-09-10T21:04:17.8756640Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-09-10T21:04:18.0588440Z Cache hit for: macOS-spm-a28cfd61565949306975d0fa81bfcfea0ce73fc1e970ad418a47eb7fce91c7f0
+2026-09-10T21:04:18.0710090Z (node:1541) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-09-10T21:04:19.2588280Z Received 33554432 of 2221408860 (1.5%), 31.6 MBs/sec
+2026-09-10T21:04:20.2585290Z Received 134217728 of 2221408860 (6.0%), 63.6 MBs/sec
+2026-09-10T21:04:21.2614140Z Received 234881024 of 2221408860 (10.6%), 74.2 MBs/sec
+2026-09-10T21:04:22.2629270Z Received 327155712 of 2221408860 (14.7%), 77.7 MBs/sec
+2026-09-10T21:04:23.2643100Z Received 411041792 of 2221408860 (18.5%), 78.1 MBs/sec
+2026-09-10T21:04:24.2689230Z Received 520093696 of 2221408860 (23.4%), 82.4 MBs/sec
+2026-09-10T21:04:25.2667070Z Received 595591168 of 2221408860 (26.8%), 80.9 MBs/sec
+2026-09-10T21:04:26.2699120Z Received 679477248 of 2221408860 (30.6%), 80.8 MBs/sec
+2026-09-10T21:04:27.2689890Z Received 784334848 of 2221408860 (35.3%), 82.9 MBs/sec
+2026-09-10T21:04:28.2703210Z Received 868220928 of 2221408860 (39.1%), 82.6 MBs/sec
+2026-09-10T21:04:29.2731520Z Received 939524096 of 2221408860 (42.3%), 81.2 MBs/sec
+2026-09-10T21:04:30.2742000Z Received 1048576000 of 2221408860 (47.2%), 83.1 MBs/sec
+2026-09-10T21:04:31.2754010Z Received 1119879168 of 2221408860 (50.4%), 82.0 MBs/sec
+2026-09-10T21:04:32.2775140Z Received 1207959552 of 2221408860 (54.4%), 82.1 MBs/sec
+2026-09-10T21:04:33.2788230Z Received 1291845632 of 2221408860 (58.2%), 81.9 MBs/sec
+2026-09-10T21:04:34.2811350Z Received 1367343104 of 2221408860 (61.6%), 81.3 MBs/sec
+2026-09-10T21:04:35.2813080Z Received 1472200704 of 2221408860 (66.3%), 82.4 MBs/sec
+2026-09-10T21:04:36.2818170Z Received 1539309568 of 2221408860 (69.3%), 81.4 MBs/sec
+2026-09-10T21:04:37.2819050Z Received 1614807040 of 2221408860 (72.7%), 80.9 MBs/sec
+2026-09-10T21:04:38.2827090Z Received 1719664640 of 2221408860 (77.4%), 81.8 MBs/sec
+2026-09-10T21:04:39.2867910Z Received 1795162112 of 2221408860 (80.8%), 81.4 MBs/sec
+2026-09-10T21:04:40.2876290Z Received 1874853888 of 2221408860 (84.4%), 81.1 MBs/sec
+2026-09-10T21:04:41.2882340Z Received 1937768448 of 2221408860 (87.2%), 80.2 MBs/sec
+2026-09-10T21:04:42.2889220Z Received 2013265920 of 2221408860 (90.6%), 79.9 MBs/sec
+2026-09-10T21:04:43.2891950Z Received 2097152000 of 2221408860 (94.4%), 79.9 MBs/sec
+2026-09-10T21:04:44.2923380Z Received 2185232384 of 2221408860 (98.4%), 80.0 MBs/sec
+2026-09-10T21:04:44.7460230Z Received 2221408860 of 2221408860 (100.0%), 79.9 MBs/sec
+2026-09-10T21:04:44.7466880Z Cache Size: ~2119 MB (2221408860 B)
+2026-09-10T21:04:44.7547590Z [command]/opt/homebrew/bin/gtar -xf /Users/runner/work/_temp/408772ac-6ee2-4c92-8581-a0f961bd2c4f/cache.tzst -P -C /Users/runner/work/CSign/CSign --delay-directory-restore --use-compress-program unzstd
+2026-09-10T21:04:55.9415920Z Cache restored successfully
+2026-09-10T21:04:56.2519690Z Cache restored from key: macOS-spm-a28cfd61565949306975d0fa81bfcfea0ce73fc1e970ad418a47eb7fce91c7f0

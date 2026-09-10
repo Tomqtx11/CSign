@@ -200,10 +200,10 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 				return sortAscending ? comparison : !comparison
 			}
 			_groupedAppsByCategory = Dictionary(grouping: sorted) {
-				$0.app.category?.capitalized ?? .localized("Others")
+				$0.app.category?.capitalized ?? String.localized("Others")
 			}
 			_sortedSectionTitles = _groupedAppsByCategory.keys.sorted(by: {
-				let other = .localized("Others")
+				let other = String.localized("Others")
 				if $0 == other { return false }
 				if $1 == other { return true }
 				return sortAscending ? $0 < $1 : $0 > $1

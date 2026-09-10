@@ -1,0 +1,102 @@
+﻿2026-09-10T21:04:02.0218650Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-09-10T21:04:02.0228450Z ##[group]Run actions/checkout@v4
+2026-09-10T21:04:02.0229400Z with:
+2026-09-10T21:04:02.0230040Z   submodules: recursive
+2026-09-10T21:04:02.0230730Z   fetch-depth: 0
+2026-09-10T21:04:02.0231400Z   repository: Tomqtx11/CSign
+2026-09-10T21:04:02.0239260Z   token: ***
+2026-09-10T21:04:02.0240050Z   ssh-strict: true
+2026-09-10T21:04:02.0240720Z   ssh-user: git
+2026-09-10T21:04:02.0241430Z   persist-credentials: true
+2026-09-10T21:04:02.0242210Z   clean: true
+2026-09-10T21:04:02.0242900Z   sparse-checkout-cone-mode: true
+2026-09-10T21:04:02.0243670Z   fetch-tags: false
+2026-09-10T21:04:02.0244240Z   show-progress: true
+2026-09-10T21:04:02.0244920Z   lfs: false
+2026-09-10T21:04:02.0245630Z   set-safe-directory: true
+2026-09-10T21:04:02.0246360Z   allow-unsafe-pr-checkout: false
+2026-09-10T21:04:02.0247480Z ##[endgroup]
+2026-09-10T21:04:02.4776720Z Syncing repository: Tomqtx11/CSign
+2026-09-10T21:04:02.4779740Z ##[group]Getting Git version info
+2026-09-10T21:04:02.4780730Z Working directory is '/Users/runner/work/CSign/CSign'
+2026-09-10T21:04:02.4782590Z [command]/opt/homebrew/bin/git version
+2026-09-10T21:04:02.5995780Z git version 2.55.0
+2026-09-10T21:04:02.6009640Z ##[endgroup]
+2026-09-10T21:04:02.6021210Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/db115f39-0ff8-4762-b719-176b34a27e61/.gitconfig'
+2026-09-10T21:04:02.6028560Z Temporarily overriding HOME='/Users/runner/work/_temp/db115f39-0ff8-4762-b719-176b34a27e61' before making global git config changes
+2026-09-10T21:04:02.6030430Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-10T21:04:02.6032650Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/CSign/CSign
+2026-09-10T21:04:02.6186860Z Deleting the contents of '/Users/runner/work/CSign/CSign'
+2026-09-10T21:04:02.6193090Z ##[group]Initializing the repository
+2026-09-10T21:04:02.6201690Z [command]/opt/homebrew/bin/git init /Users/runner/work/CSign/CSign
+2026-09-10T21:04:02.6488840Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-09-10T21:04:02.6491140Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-09-10T21:04:02.6492690Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-09-10T21:04:02.6493800Z hint: call:
+2026-09-10T21:04:02.6494390Z hint:
+2026-09-10T21:04:02.6495080Z hint: 	git config --global init.defaultBranch <name>
+2026-09-10T21:04:02.6496110Z hint:
+2026-09-10T21:04:02.6497170Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-09-10T21:04:02.6498570Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-09-10T21:04:02.6499790Z hint:
+2026-09-10T21:04:02.6500440Z hint: 	git branch -m <name>
+2026-09-10T21:04:02.6501110Z hint:
+2026-09-10T21:04:02.6502000Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-09-10T21:04:02.6503830Z Initialized empty Git repository in /Users/runner/work/CSign/CSign/.git/
+2026-09-10T21:04:02.6506990Z [command]/opt/homebrew/bin/git remote add origin https://github.com/Tomqtx11/CSign
+2026-09-10T21:04:02.6598620Z ##[endgroup]
+2026-09-10T21:04:02.6599930Z ##[group]Disabling automatic garbage collection
+2026-09-10T21:04:02.6601210Z [command]/opt/homebrew/bin/git config --local gc.auto 0
+2026-09-10T21:04:02.6696890Z ##[endgroup]
+2026-09-10T21:04:02.6699240Z ##[group]Setting up auth
+2026-09-10T21:04:02.6708920Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-10T21:04:02.6834260Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-10T21:04:02.8668930Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-10T21:04:02.8754270Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-10T21:04:02.9820400Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-09-10T21:04:02.9895980Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-09-10T21:04:03.1481750Z [command]/opt/homebrew/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-09-10T21:04:03.1563590Z ##[endgroup]
+2026-09-10T21:04:03.1564910Z ##[group]Fetching the repository
+2026-09-10T21:04:03.1570930Z [command]/opt/homebrew/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+2026-09-10T21:04:04.7856140Z From https://github.com/Tomqtx11/CSign
+2026-09-10T21:04:04.7857380Z  * [new branch]      backup-stable -> origin/backup-stable
+2026-09-10T21:04:04.7858300Z  * [new branch]      main          -> origin/main
+2026-09-10T21:04:04.7859090Z  * [new tag]         v1.0-250d9c7  -> v1.0-250d9c7
+2026-09-10T21:04:04.7859960Z  * [new tag]         v1.0.1        -> v1.0.1
+2026-09-10T21:04:04.7860620Z  * [new tag]         v1.0.2        -> v1.0.2
+2026-09-10T21:04:04.7862570Z  * [new tag]         v1.0.3        -> v1.0.3
+2026-09-10T21:04:04.7863320Z  * [new tag]         v1.0.4        -> v1.0.4
+2026-09-10T21:04:04.7866190Z [command]/opt/homebrew/bin/git branch --list --remote origin/main
+2026-09-10T21:04:04.7982720Z   origin/main
+2026-09-10T21:04:04.7991540Z [command]/opt/homebrew/bin/git rev-parse refs/remotes/origin/main
+2026-09-10T21:04:04.8064030Z 8a45b2d31c58b01a5feca59ea3b788c872257b60
+2026-09-10T21:04:04.8066470Z ##[endgroup]
+2026-09-10T21:04:04.8066850Z ##[group]Determining the checkout info
+2026-09-10T21:04:04.8067330Z ##[endgroup]
+2026-09-10T21:04:04.8072650Z [command]/opt/homebrew/bin/git sparse-checkout disable
+2026-09-10T21:04:04.8168370Z [command]/opt/homebrew/bin/git config --local --unset-all extensions.worktreeConfig
+2026-09-10T21:04:04.8244690Z ##[group]Checking out the ref
+2026-09-10T21:04:04.8248430Z [command]/opt/homebrew/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-09-10T21:04:05.0053360Z Switched to a new branch 'main'
+2026-09-10T21:04:05.0058220Z branch 'main' set up to track 'origin/main'.
+2026-09-10T21:04:05.0063460Z ##[endgroup]
+2026-09-10T21:04:05.0064350Z ##[group]Setting up auth for fetching submodules
+2026-09-10T21:04:05.0065960Z [command]/opt/homebrew/bin/git config --global http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-09-10T21:04:05.0159670Z [command]/opt/homebrew/bin/git config --global --unset-all url.https://github.com/.insteadOf
+2026-09-10T21:04:05.0271230Z [command]/opt/homebrew/bin/git config --global --add url.https://github.com/.insteadOf git@github.com:
+2026-09-10T21:04:05.0369610Z [command]/opt/homebrew/bin/git config --global --add url.https://github.com/.insteadOf org-325813653@github.com:
+2026-09-10T21:04:05.0475070Z ##[endgroup]
+2026-09-10T21:04:05.0477180Z ##[group]Fetching submodules
+2026-09-10T21:04:05.0478350Z [command]/opt/homebrew/bin/git submodule sync --recursive
+2026-09-10T21:04:05.1939220Z [command]/opt/homebrew/bin/git -c protocol.version=2 submodule update --init --force --recursive
+2026-09-10T21:04:05.3811360Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local gc.auto 0
+2026-09-10T21:04:05.5212200Z ##[endgroup]
+2026-09-10T21:04:05.5215970Z ##[group]Persisting credentials for submodules
+2026-09-10T21:04:05.5219030Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'url\.https\:\/\/github\.com\/\.insteadOf' && git config --local --unset-all 'url.https://github.com/.insteadOf' || :"
+2026-09-10T21:04:05.6547220Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local 'http.https://github.com/.extraheader' 'AUTHORIZATION: basic ***' && git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-09-10T21:04:05.7675670Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --add 'url.https://github.com/.insteadOf' 'git@github.com:'
+2026-09-10T21:04:06.0194230Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --add 'url.https://github.com/.insteadOf' 'org-325813653@github.com:'
+2026-09-10T21:04:06.1542360Z ##[endgroup]
+2026-09-10T21:04:06.1575380Z [command]/opt/homebrew/bin/git log -1 --format=%H
+2026-09-10T21:04:06.1600890Z 8a45b2d31c58b01a5feca59ea3b788c872257b60
