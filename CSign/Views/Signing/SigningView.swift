@@ -323,7 +323,7 @@ extension SigningView {
 			return
 		}
 
-		let generator = UIImpactFeedbackGenerator(style: .light)
+		let generator = UIImpactFeedbackGenerator(style: .medium)
 		generator.impactOccurred()
 		_isSigning = true
 		
@@ -344,6 +344,15 @@ extension SigningView {
 					actions: [ok]
 				)
 			} else {
+                let successFeedback = UINotificationFeedbackGenerator()
+                successFeedback.notificationOccurred(.success)
+                
+                HistoryManager.shared.addHistory(
+                    appName: _temporaryOptions.appName ?? app.name ?? "Unknown App",
+                    appIdentifier: _temporaryOptions.appIdentifier ?? app.identifier ?? "unknown.id",
+                    options: _temporaryOptions
+                )
+
 				if
 					_temporaryOptions.post_deleteAppAfterSigned,
 					!app.isSigned
