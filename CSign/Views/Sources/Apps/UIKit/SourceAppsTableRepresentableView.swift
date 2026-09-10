@@ -158,8 +158,8 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 			return matchesSearch && matchesCategory
 		}
 		
-		// Lọc chỉ hiển thị 1 version mới nhất khi không dùng thanh tìm kiếm
-		if searchText.isEmpty {
+		// Lọc chỉ hiển thị 1 version mới nhất khi đang chọn phân loại cụ thể và không dùng thanh tìm kiếm
+		if searchText.isEmpty && selectedCategory != nil {
 			var uniqueApps: [String: SourceAppEntry] = [:]
 			for entry in filtered {
 				let key = entry.app.id ?? entry.app.name ?? UUID().uuidString
