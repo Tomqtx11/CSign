@@ -38,6 +38,13 @@ struct AppearanceView: View {
 		)
 	}
 	
+	@State private var _currentIcon: String = UIApplication.shared.alternateIconName ?? "Default"
+	private let _appIcons: [(name: String, image: String)] = [
+		("Default", "Glyph"),
+		("Cyberpunk", "Icon-Cyberpunk"),
+		("Hacker", "Icon-Hacker")
+	]
+	
 	// MARK: Body
 	var body: some View {
 		NBList(.localized("Appearance")) {
@@ -65,23 +72,35 @@ struct AppearanceView: View {
 			}
 			
 			NBSection(.localized("App Icon")) {
-				Picker(.localized("App Icon"), selection: Binding(
-					get: { UIApplication.shared.alternateIconName ?? "Default" },
-					set: { newValue in
-						let iconName: String? = newValue == "Default" ? nil : newValue
-						UIApplication.shared.setAlternateIconName(iconName) { error in
-							if let error = error {
-								print(error.localizedDescription)
-							}
+				Picker(.localized("App Icon"), selection: $_currentIcon) {
+					ForEach(_appIcons, id: \.name) { icon in
+						HStack(spacing: 12) {
+							if let uiImage = UIImage(named: icon.image) {
+								Image(uiImage: uiImage)
+									.resizable()
+									.aspectRatio(contentMode: .fit)
+									.frame(width: 40, height: 40)
+									.cornerRadius(10)
+							} else {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.gray.opacity(0.3))
+                                    .frame(width: 40, height: 40)
+                            }
+							Text(icon.name).font(.body)
 						}
+						.tag(icon.name)
 					}
-				)) {
-					Text("Default").tag("Default")
-					Text("Cyberpunk").tag("Cyberpunk")
-					Text("Hacker").tag("Hacker")
 				}
 				.pickerStyle(.inline)
 				.labelsHidden()
+				.onChange(of: _currentIcon) { newValue in
+					let iconName: String? = newValue == "Default" ? nil : newValue
+					UIApplication.shared.setAlternateIconName(iconName) { error in
+						if let error = error {
+							print(error.localizedDescription)
+						}
+					}
+				}
 			}
 			
 			if #available(iOS 18.0, *) {
