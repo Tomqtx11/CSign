@@ -12,7 +12,6 @@ import AltSourceKit
 struct SourceAppsTableRepresentableView: UIViewRepresentable {
 	var sourceContexts: [SourceAppsView.SourceRepositoryContext]
 	@Binding var searchText: String
-	var selectedCategory: String?
 	@Binding var selectedCategory: String?
 	@Binding var sortOption: SourceAppsView.SortOption
 	@Binding var sortAscending: Bool
@@ -163,7 +162,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 		if searchText.isEmpty {
 			var uniqueApps: [String: SourceAppEntry] = [:]
 			for entry in filtered {
-				let key = entry.app.bundleIdentifier ?? entry.app.name ?? UUID().uuidString
+				let key = entry.app.id ?? entry.app.name ?? UUID().uuidString
 				if let existing = uniqueApps[key] {
 					let existingDate = existing.app.currentDate?.date ?? .distantPast
 					let newDate = entry.app.currentDate?.date ?? .distantPast
