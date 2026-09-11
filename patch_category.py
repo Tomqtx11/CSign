@@ -1,51 +1,28 @@
-import sys
+import re
 
-with open("CSign/Views/Sources/Apps/UIKit/SourceAppsTableRepresentableView.swift", "r") as f:
+with open("CSign/Views/Sources/Apps/SourceAppsView.swift", "r") as f:
     content = f.read()
 
-# Add _groupedAppsByCategory
-content = content.replace(
-    "private var _groupedAppsByNameFirstLetter: [String: [SourceAppEntry]] = [:]",
-    "private var _groupedAppsByNameFirstLetter: [String: [SourceAppEntry]] = [:]\n\tprivate var _groupedAppsByCategory: [String: [SourceAppEntry]] = [:]"
-)
+target = 'cats.insert(app.category?.capitalized ?? String.localized("Others"))'
 
-# Add .category logic to _calculateSortedApps
-category_logic = """		case .category:
-			let sorted = filtered.sorted {
-				let n1 = $0.app.name ?? ""
-				let n2 = $1.app.name ?? ""
-				let comparison = n1.localizedCaseInsensitiveCompare(n2) == .orderedAscending
-				return sortAscending ? comparison : !comparison
-			}
-			_groupedAppsByCategory = Dictionary(grouping: sorted) {
-				$0.app.category?.capitalized ?? .localized("Others")
-			}
-			_sortedSectionTitles = _groupedAppsByCategory.keys.sorted(by: {
-				let other = .localized("Others")
-				if $0 == other { return false }
-				if $1 == other { return true }
-				return sortAscending ? $0 < $1 : $0 > $1
-			})
-			return sorted
-		}"""
+replacement = '''
+				let cat = app.category?.capitalized ?? ""
+				if !cat.isEmpty && cat.lowercased() != "unknown" && cat.lowercased() != "others" {
+					cats.insert(cat)
+				} else {
+					let text = ((app.name ?? "") + " " + (app.description ?? "") + " " + (app.subtitle ?? "")).lowercased()
+					if text.contains("game") || text.contains("hack") || text.contains("cheat") || text.contains("mod") { cats.insert("Games") }
+					else if text.contains("video") || text.contains("youtube") || text.contains("tiktok") || text.contains("movie") { cats.insert("Video") }
+					else if text.contains("photo") || text.contains("camera") || text.contains("image") || text.contains("instagram") || text.contains("picsart") { cats.insert("Photo") }
+					else if text.contains("edit") || text.contains("capcut") || text.contains("luma") { cats.insert("Editor") }
+					else if text.contains("music") || text.contains("spotify") || text.contains("audio") || text.contains("mp3") { cats.insert("Music") }
+					else if text.contains("social") || text.contains("facebook") || text.contains("twitter") || text.contains("chat") || text.contains("messenger") { cats.insert("Social") }
+					else if text.contains("tool") || text.contains("utility") || text.contains("jailbreak") || text.contains("trollstore") || text.contains("manager") { cats.insert("Utilities") }
+					else { cats.insert(String.localized("Others")) }
+				}
+'''
 
-content = content.replace("return sorted\n\t\t}", "return sorted\n" + category_logic)
+content = content.replace(target, replacement)
 
-# Replace switch sortOption in other methods
-content = content.replace("case .name, .date: _sortedSectionTitles.count", "case .name, .date, .category: _sortedSectionTitles.count")
-content = content.replace("case .name, .date: title = _sortedSectionTitles[section]", "case .name, .date, .category: title = _sortedSectionTitles[section]")
-
-content = content.replace(
-    "case .date: _groupedAppsByDate[_sortedSectionTitles[section]]?.count ?? 0",
-    "case .date: _groupedAppsByDate[_sortedSectionTitles[section]]?.count ?? 0\n\t\tcase .category: _groupedAppsByCategory[_sortedSectionTitles[section]]?.count ?? 0"
-)
-
-content = content.replace(
-    "case .date: entry = _groupedAppsByDate[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]",
-    "case .date: entry = _groupedAppsByDate[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]\n\t\tcase .category: entry = _groupedAppsByCategory[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]"
-)
-
-with open("CSign/Views/Sources/Apps/UIKit/SourceAppsTableRepresentableView.swift", "w") as f:
+with open("CSign/Views/Sources/Apps/SourceAppsView.swift", "w") as f:
     f.write(content)
-
-print("Patched SourceAppsTableRepresentableView for categories")

@@ -696,3 +696,25 @@ public struct OSVersion: Decodable, Hashable, CustomStringConvertible, Sendable 
 		self.patchVersion = components[safe: 2] ?? 0
 	}
 }
+
+
+extension ASRepository.App {
+	public var inferredCategory: String {
+		let cat = self.category?.capitalized ?? ""
+		if !cat.isEmpty && cat.lowercased() != "unknown" && cat.lowercased() != "others" {
+			return cat
+		}
+		let text = ((self.name ?? "") + " " + (self.description ?? "") + " " + (self.subtitle ?? "")).lowercased()
+		if text.contains("game") || text.contains("hack") || text.contains("cheat") || text.contains("mod") { return "Games" }
+		if text.contains("video") || text.contains("youtube") || text.contains("tiktok") || text.contains("movie") { return "Video" }
+		if text.contains("photo") || text.contains("camera") || text.contains("image") || text.contains("instagram") || text.contains("picsart") { return "Photo" }
+		if text.contains("edit") || text.contains("capcut") || text.contains("luma") { return "Editor" }
+		if text.contains("music") || text.contains("spotify") || text.contains("audio") || text.contains("mp3") { return "Music" }
+		if text.contains("social") || text.contains("facebook") || text.contains("twitter") || text.contains("chat") || text.contains("messenger") { return "Social" }
+		if text.contains("tool") || text.contains("utility") || text.contains("jailbreak") || text.contains("trollstore") || text.contains("manager") { return "Utilities" }
+		
+		// Fallback String.localized is not available here unless Foundation/localization is imported. 
+		// We can just return "Others" and let the view localize it if needed.
+		return "Others"
+	}
+}

@@ -131,19 +131,7 @@ struct SourceAppsDetailView: View {
 							_infoRow(title: .localized("Size"), value: Int64(size).formattedByteCount)
 						}
 						
-						var appCat = app.category?.capitalized ?? ""
-						if appCat.isEmpty || appCat.lowercased() == "unknown" || appCat.lowercased() == "others" {
-							let text = ((app.name ?? "") + " " + (app.description ?? "") + " " + (app.subtitle ?? "")).lowercased()
-							if text.contains("game") || text.contains("hack") || text.contains("cheat") || text.contains("mod") { appCat = "Games" }
-							else if text.contains("video") || text.contains("youtube") || text.contains("tiktok") || text.contains("movie") { appCat = "Video" }
-							else if text.contains("photo") || text.contains("camera") || text.contains("image") || text.contains("instagram") || text.contains("picsart") { appCat = "Photo" }
-							else if text.contains("edit") || text.contains("capcut") || text.contains("luma") { appCat = "Editor" }
-							else if text.contains("music") || text.contains("spotify") || text.contains("audio") || text.contains("mp3") { appCat = "Music" }
-							else if text.contains("social") || text.contains("facebook") || text.contains("twitter") || text.contains("chat") || text.contains("messenger") { appCat = "Social" }
-							else if text.contains("tool") || text.contains("utility") || text.contains("jailbreak") || text.contains("trollstore") || text.contains("manager") { appCat = "Utilities" }
-							else { appCat = String.localized("Others") }
-						}
-						_infoRow(title: .localized("Category"), value: appCat)
+						_infoRow(title: .localized("Category"), value: app.inferredCategory == "Others" ? .localized("Others") : app.inferredCategory)
 						
 						if let version = app.currentVersion {
 							_infoRow(title: .localized("Version"), value: version)
