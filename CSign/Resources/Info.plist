@@ -48,27 +48,7 @@
 			<key>UIPrerenderedIcon</key>
 			<false/>
 		</dict>
-		<key>CFBundleAlternateIcons</key>
-		<dict>
-			<key>Cyberpunk</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>Icon-Cyberpunk</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<false/>
-			</dict>
-			<key>Hacker</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>Icon-Hacker</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<false/>
-			</dict>
-		</dict>
+
 	</dict>
 	<key>CFBundleURLTypes</key>
 	<array>

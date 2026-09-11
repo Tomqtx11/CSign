@@ -152,7 +152,18 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 				(entry.app.subtitle?.localizedCaseInsensitiveContains(searchText) ?? false) ||
 				(entry.app.localizedDescription?.localizedCaseInsensitiveContains(searchText) ?? false)
 			
-			let appCat = entry.app.category?.capitalized ?? String.localized("Others")
+			var appCat = entry.app.category?.capitalized ?? ""
+			if appCat.isEmpty || appCat.lowercased() == "unknown" || appCat.lowercased() == "others" {
+				let text = ((entry.app.name ?? "") + " " + (entry.app.description ?? "") + " " + (entry.app.subtitle ?? "")).lowercased()
+				if text.contains("game") || text.contains("hack") || text.contains("cheat") || text.contains("mod") { appCat = "Games" }
+				else if text.contains("video") || text.contains("youtube") || text.contains("tiktok") || text.contains("movie") { appCat = "Video" }
+				else if text.contains("photo") || text.contains("camera") || text.contains("image") || text.contains("instagram") || text.contains("picsart") { appCat = "Photo" }
+				else if text.contains("edit") || text.contains("capcut") || text.contains("luma") { appCat = "Editor" }
+				else if text.contains("music") || text.contains("spotify") || text.contains("audio") || text.contains("mp3") { appCat = "Music" }
+				else if text.contains("social") || text.contains("facebook") || text.contains("twitter") || text.contains("chat") || text.contains("messenger") { appCat = "Social" }
+				else if text.contains("tool") || text.contains("utility") || text.contains("jailbreak") || text.contains("trollstore") || text.contains("manager") { appCat = "Utilities" }
+				else { appCat = String.localized("Others") }
+			}
 			let matchesCategory = selectedCategory == nil || appCat == selectedCategory
 			
 			return matchesSearch && matchesCategory
