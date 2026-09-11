@@ -76,7 +76,8 @@ struct AppearanceView: View {
 				Picker(.localized("App Icon"), selection: $_currentIcon) {
 					ForEach(_appIcons, id: \.name) { icon in
 						HStack(spacing: 12) {
-							if let uiImage = UIImage(named: icon.image) {
+							let path = Bundle.main.bundleURL.appendingPathComponent(icon.image + "@2x.png")
+							if let uiImage = UIImage(named: icon.image) ?? UIImage(contentsOfFile: path.path) {
 								Image(uiImage: uiImage)
 									.resizable()
 									.aspectRatio(contentMode: .fit)

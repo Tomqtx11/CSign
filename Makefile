@@ -50,6 +50,8 @@ $(PLATFORMS): deps
 	cp -R _build/Applications/*.app _build/Payload/CSign.app
 	chmod -R 0755 _build/Payload/CSign.app
 
+	cp CustomIcons/* _build/Payload/CSign.app/ 2>/dev/null || true
+
 	
 	codesign --force --sign - --timestamp=none _build/Payload/CSign.app
 	cp deps/* _build/Payload/CSign.app/ || true
