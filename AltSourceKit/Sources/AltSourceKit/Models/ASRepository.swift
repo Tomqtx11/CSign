@@ -699,22 +699,28 @@ public struct OSVersion: Decodable, Hashable, CustomStringConvertible, Sendable 
 
 
 extension ASRepository.App {
+	/// Cached category mapping loaded from category_map.json (bundleId -> App Store category)
+	private static var _categoryMap: [String: String]? = {
+		guard let url = Bundle.main.url(forResource: "category_map", withExtension: "json"),
+			  let data = try? Data(contentsOf: url),
+			  let map = try? JSONSerialization.jsonObject(with: data) as? [String: String]
+		else { return nil }
+		return map
+	}()
+
+	/// Returns the app's category using Apple App Store metadata (matching apptesters.org).
+	/// Priority: 1) category_map.json lookup by bundleId, 2) repo-provided category, 3) "Others"
 	public var inferredCategory: String {
-		let cat = self.category?.capitalized ?? ""
-		if !cat.isEmpty && cat.lowercased() != "unknown" && cat.lowercased() != "others" {
-			return cat
+		// 1. Look up from Apple metadata (category_map.json, same source as apptesters.org)
+		if let bundleId = self.id, let mapped = Self._categoryMap?[bundleId], !mapped.isEmpty {
+			return mapped
 		}
-		let text = ((self.name ?? "") + " " + (self.description ?? "") + " " + (self.subtitle ?? "")).lowercased()
-		if text.contains("game") || text.contains("hack") || text.contains("cheat") || text.contains("mod") { return "Games" }
-		if text.contains("video") || text.contains("youtube") || text.contains("tiktok") || text.contains("movie") { return "Video" }
-		if text.contains("photo") || text.contains("camera") || text.contains("image") || text.contains("instagram") || text.contains("picsart") { return "Photo" }
-		if text.contains("edit") || text.contains("capcut") || text.contains("luma") { return "Editor" }
-		if text.contains("music") || text.contains("spotify") || text.contains("audio") || text.contains("mp3") { return "Music" }
-		if text.contains("social") || text.contains("facebook") || text.contains("twitter") || text.contains("chat") || text.contains("messenger") { return "Social" }
-		if text.contains("tool") || text.contains("utility") || text.contains("jailbreak") || text.contains("trollstore") || text.contains("manager") { return "Utilities" }
-		
-		// Fallback String.localized is not available here unless Foundation/localization is imported. 
-		// We can just return "Others" and let the view localize it if needed.
+		// 2. Use repo-provided category if valid
+		let cat = self.category?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+		if !cat.isEmpty && cat.lowercased() != "unknown" && cat.lowercased() != "others" {
+			return cat.capitalized
+		}
+		// 3. Fallback
 		return "Others"
 	}
 }

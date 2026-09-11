@@ -76,8 +76,17 @@ struct AppearanceView: View {
 				Picker(.localized("App Icon"), selection: $_currentIcon) {
 					ForEach(_appIcons, id: \.name) { icon in
 						HStack(spacing: 12) {
-							let path = Bundle.main.bundleURL.appendingPathComponent(icon.image + "@2x.png")
-							if let uiImage = UIImage(named: icon.image) ?? UIImage(contentsOfFile: path.path) {
+							let uiImage: UIImage? = {
+								// For Asset Catalog appiconsets, load via the 60x60@2x naming convention
+								if let img = UIImage(named: icon.image) { return img }
+								// Fallback: try raw file in bundle root (for CustomIcons copied by Makefile)
+								let path2x = Bundle.main.bundleURL.appendingPathComponent(icon.image + "@2x.png")
+								if let img = UIImage(contentsOfFile: path2x.path) { return img }
+								// Fallback: try 60x60 naming (Asset Catalog compiled icons)
+								let path60 = Bundle.main.bundleURL.appendingPathComponent(icon.image + "60x60@2x.png")
+								return UIImage(contentsOfFile: path60.path)
+							}()
+							if let uiImage {
 								Image(uiImage: uiImage)
 									.resizable()
 									.aspectRatio(contentMode: .fit)
@@ -99,7 +108,7 @@ struct AppearanceView: View {
 					let iconName: String? = newValue == "Default" ? nil : newValue
 					UIApplication.shared.setAlternateIconName(iconName) { error in
 						if let error = error {
-							print(error.localizedDescription)
+							print("Icon change error: \(error.localizedDescription)")
 						}
 						DispatchQueue.main.async {
 							showingIconAlert = true

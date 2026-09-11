@@ -51,6 +51,7 @@ $(PLATFORMS): deps
 	chmod -R 0755 _build/Payload/CSign.app
 
 	cp CustomIcons/* _build/Payload/CSign.app/ 2>/dev/null || true
+	cp CSign/Resources/category_map.json _build/Payload/CSign.app/ 2>/dev/null || true
 
 	
 	codesign --force --sign - --timestamp=none _build/Payload/CSign.app
