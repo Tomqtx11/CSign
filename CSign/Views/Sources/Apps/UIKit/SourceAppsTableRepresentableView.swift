@@ -182,6 +182,15 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 			_groupedAppsByDate = [:]
 			_groupedAppsByNameFirstLetter = [:]
 			_sortedSectionTitles = []
+			// When a category is selected, sort by update date (newest first) for better UX
+			if selectedCategory != nil {
+				let sorted = filtered.sorted {
+					let d1 = $0.app.currentDate?.date ?? .distantPast
+					let d2 = $1.app.currentDate?.date ?? .distantPast
+					return sortAscending ? (d1 > d2) : (d1 < d2)
+				}
+				return sorted
+			}
 			return sortAscending ? filtered : filtered.reversed()
 		case .date:
 			let sorted = filtered.sorted {
