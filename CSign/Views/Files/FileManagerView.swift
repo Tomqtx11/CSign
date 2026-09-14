@@ -8,8 +8,11 @@ struct FileManagerView: View {
     @State var currentDir: URL
     @State private var files: [URL] = []
     @State private var isImporting = false
+
     @State private var selectedFileURL: URL?
     @State private var isEditingText = false
+    @State private var isHexEditing = false
+
     @State private var isLoading = false
 
     @State private var isCreatingFolder = false
@@ -53,6 +56,14 @@ struct FileManagerView: View {
                                 onEdit: { 
                                     selectedFileURL = file
                                     isEditingText = true 
+                                },
+                                onHexEdit: {
+                                    selectedFileURL = file
+                                    isHexEditing = true
+                                },
+                                onClassDump: {
+                                    alertMessage = "Tính năng Class Dump đang được phát triển."
+                                    showAlert = true
                                 }
                             )
                             .allowsHitTesting(!isEditing)
@@ -74,15 +85,15 @@ struct FileManagerView: View {
                     HStack {
                         if !isEditing {
                             Menu {
-                                Button(String.localized("Nhập File"), systemImage: "square.and.arrow.down") { isImporting = true }
-                                Button(String.localized("Tạo thư mục"), systemImage: "folder.badge.plus") { isCreatingFolder = true }
-                                Button(String.localized("Tạo tập tin"), systemImage: "doc.badge.plus") { isCreatingFile = true }
+                                Button("Nhập File", systemImage: "square.and.arrow.down") { isImporting = true }
+                                Button("Tạo thư mục", systemImage: "folder.badge.plus") { isCreatingFolder = true }
+                                Button("Tạo tập tin", systemImage: "doc.badge.plus") { isCreatingFile = true }
                             } label: {
                                 Image(systemName: "plus")
                             }
                         }
                         
-                        Button(isEditing ? String.localized("Xong") : String.localized("Sửa")) {
+                        Button(isEditing ? "Xong" : "Sửa") {
                             withAnimation {
                                 isEditing.toggle()
                                 if !isEditing { selectedFiles.removeAll() }
@@ -94,7 +105,7 @@ struct FileManagerView: View {
                 if isEditing {
                     ToolbarItem(placement: .bottomBar) {
                         HStack {
-                            Button(String.localized("Chọn tất cả")) {
+                            Button("Chọn tất cả") {
                                 if selectedFiles.count == files.count {
                                     selectedFiles.removeAll()
                                 } else {
@@ -114,17 +125,17 @@ struct FileManagerView: View {
             }
             }
             
-            .alert(String.localized("Tạo thư mục mới"), isPresented: $isCreatingFolder) {
-                TextField(String.localized("Tên thư mục"), text: $newFolderName)
-                Button(String.localized("Huỷ"), role: .cancel) { newFolderName = "" }
-                Button(String.localized("Tạo")) { createNewFolder() }
+            .alert("Tạo thư mục mới", isPresented: $isCreatingFolder) {
+                TextField("Tên thư mục", text: $newFolderName)
+                Button("Huỷ", role: .cancel) { newFolderName = "" }
+                Button("Tạo") { createNewFolder() }
             }
-            .alert(String.localized("Tạo tập tin mới"), isPresented: $isCreatingFile) {
-                TextField(String.localized("Tên tập tin (VD: info.txt)"), text: $newFileName)
-                Button(String.localized("Huỷ"), role: .cancel) { newFileName = "" }
-                Button(String.localized("Tạo")) { createNewFile() }
+            .alert("Tạo tập tin mới", isPresented: $isCreatingFile) {
+                TextField("Tên tập tin (VD: info.txt)"), text: $newFileName)
+                Button("Huỷ", role: .cancel) { newFileName = "" }
+                Button("Tạo") { createNewFile() }
             }
-            .alert(String.localized("Thông báo"), isPresented: $showAlert) {
+            .alert("Thông báo", isPresented: $showAlert) {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(alertMessage)
@@ -149,11 +160,18 @@ struct FileManagerView: View {
                 )
                 .ignoresSafeArea()
             }
+
             .sheet(isPresented: $isEditingText) {
                 if let url = selectedFileURL {
                     TextEditorView(fileURL: url)
                 }
             }
+            .sheet(isPresented: $isHexEditing) {
+                if let url = selectedFileURL {
+                    HexEditorView(fileURL: url)
+                }
+            }
+
         }
     }
     
@@ -275,12 +293,16 @@ struct FileManagerView: View {
     }
 }
 
+
 struct FileRowView: View {
     let file: URL
     let onDelete: () -> Void
     let onExtract: () -> Void
     let onCompress: () -> Void
     let onEdit: () -> Void
+    let onHexEdit: () -> Void
+    let onClassDump: () -> Void
+
     
     var isDir: Bool {
         (try? file.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
@@ -385,6 +407,8 @@ struct FileRowView: View {
             onEdit()
         } else if ["ipa", "tipa", "zip", "deb"].contains(ext) {
             onExtract()
+        } else {
+            onHexEdit()
         }
     }
 }
