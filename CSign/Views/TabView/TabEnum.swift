@@ -78,36 +78,34 @@ enum TabEnum: String, CaseIterable, Hashable {
 
 struct DownloadRowView: View {
     @ObservedObject var download: Download
+    var cancelAction: () -> Void
     
     var displayName: String {
         if let appName = download.sourceProvenance?.sourceAppName { return appName }
         let name = download.fileName.replacingOccurrences(of: ".ipa", with: "", options: .caseInsensitive)
-        // If it starts with UUID-like, we can't easily strip without regex, but just stripping .ipa is good
         return name
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(displayName)
-                .font(.headline)
-            
-            if download.isFinished {
-                Text(.localized("Hoàn tất"))
-                    .foregroundColor(.green)
-                    .font(.subheadline)
-            } else if download.error != nil {
-                Text(.localized("Lỗi tải xuống"))
-                    .foregroundColor(.red)
-                    .font(.subheadline)
-            } else {
+        HStack {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(displayName)
+                    .font(.headline)
+                
                 ProgressView(value: download.overallProgress)
                 HStack {
                     Text(String(format: "%.1f%%", download.overallProgress * 100))
                     Spacer()
-                    Text("\(formatBytes(download.bytesDownloaded)) / \(formatBytes(download.totalBytes))")
+                    if download.totalBytes > 0 {
+                        Text("\(formatBytes(download.bytesDownloaded)) / \(formatBytes(download.totalBytes))")
+                    }
                 }
                 .font(.caption)
                 .foregroundColor(.secondary)
+            }
+            Spacer()
+            Button(role: .destructive, action: cancelAction) {
+                Image(systemName: "xmark.circle.fill").foregroundColor(.secondary)
             }
         }
         .padding(.vertical, 4)
@@ -248,29 +246,9 @@ struct HistoryView: View {
             } else {
                 NBSection("Đang Tải Xuống") {
                     ForEach(downloadManager.downloads) { dl in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text(dl.fileName).font(.headline)
-                                ProgressView(value: dl.overallProgress)
-                                HStack {
-                                    Text("\(Int(dl.overallProgress * 100))%")
-                                        .font(.caption).foregroundColor(.secondary)
-                                    Spacer()
-                                    if dl.totalBytes > 0 {
-                                        Text("\(ByteCountFormatter.string(fromByteCount: dl.bytesDownloaded, countStyle: .file)) / \(ByteCountFormatter.string(fromByteCount: dl.totalBytes, countStyle: .file))")
-                                            .font(.caption).foregroundColor(.secondary)
-                                    }
-                                }
-                            }
-                            Spacer()
-                            Button(role: .destructive) {
-                                downloadManager.cancelDownload(dl)
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
-                            }
+                        DownloadRowView(download: dl) {
+                            downloadManager.cancelDownload(dl)
                         }
-                        .padding(.vertical, 4)
                     }
                 }
             }

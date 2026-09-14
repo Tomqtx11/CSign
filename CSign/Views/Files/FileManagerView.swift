@@ -16,7 +16,7 @@ struct FileItem: Hashable, Identifiable {
 
 struct FileManagerView: View {
     @State var currentDir: URL
-    @State private var files: [URL] = []
+    @State private var files: [FileItem] = []
     @State private var isImporting = false
 
     @State private var selectedFileURL: URL?
@@ -50,7 +50,7 @@ struct FileManagerView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding()
                 } else {
-                    ForEach(files, id: \.self) { file in
+                    ForEach(files) { file in
                         HStack {
                             if isEditing {
                                 Image(systemName: selectedFiles.contains(file) ? "checkmark.circle.fill" : "circle")
