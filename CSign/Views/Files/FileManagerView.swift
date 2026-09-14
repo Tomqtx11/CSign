@@ -80,30 +80,59 @@ struct FileManagerView: View {
                         }
                     }
             }
-            .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    if !isEditing {
-                        Menu {
-                            Button(action: { isImporting = true }) {
-                                Label("Nhập File", systemImage: "square.and.arrow.down")
+                        .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    HStack {
+                        if !isEditing {
+                            Menu {
+                                Button(action: { isImporting = true }) {
+                                    Label("Nhập File", systemImage: "square.and.arrow.down")
+                                }
+                                Button(action: { isCreatingFolder = true }) {
+                                    Label("Tạo thư mục", systemImage: "folder.badge.plus")
+                                }
+                                Button(action: { isCreatingFile = true }) {
+                                    Label("Tạo tập tin", systemImage: "doc.badge.plus")
+                                }
+                            } label: {
+                                Image(systemName: "plus")
                             }
-                            Button(action: { isCreatingFolder = true }) {
-                                Label("Tạo thư mục", systemImage: "folder.badge.plus")
+                        }
+                        
+                        Button(action: {
+                            withAnimation {
+                                isEditing.toggle()
+                                if !isEditing { selectedFiles.removeAll() }
                             }
-                            Button(action: { isCreatingFile = true }) {
-                                Label("Tạo tập tin", systemImage: "doc.badge.plus")
-                            }
-                        } label: {
-                            Image(systemName: "plus")
+                        }) {
+                            Text(isEditing ? "Xong" : "Sửa")
                         }
                     }
-                    
-                    Button(action: {
-                        withAnimation {
-                            isEditing.toggle()
-                            if !isEditing { selectedFiles.removeAll() }
+                }
+                
+                if isEditing {
+                    ToolbarItem(placement: .bottomBar) {
+                        HStack {
+                            Button(action: {
+                                if selectedFiles.count == files.count {
+                                    selectedFiles.removeAll()
+                                } else {
+                                    selectedFiles = Set(files)
+                                }
+                            }) {
+                                Text("Chọn tất cả")
+                            }
+                            Spacer()
+                            Button(role: .destructive, action: {
+                                deleteSelectedFiles()
+                            }) {
+                                Image(systemName: "trash")
+                            }
+                            .disabled(selectedFiles.isEmpty)
                         }
-                    }) {
+                    }
+                }
+            }) {
                         Text(isEditing ? "Xong" : "Sửa")
                     }
                 }
