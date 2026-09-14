@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 import Zip
 import NimbleViews
@@ -137,7 +138,7 @@ struct FileManagerView: View {
         Task {
             do {
                 let ipaURL = currentDir.appendingPathComponent(url.lastPathComponent + "_Repack.ipa")
-                try await Zip.zipFiles(paths: [url], zipFilePath: ipaURL, password: nil, progress: nil)
+                try await Zip.zipFiles(paths: [url], zipFilePath: ipaURL, password: nil, compression: .DefaultCompression, progress: nil)
                 await MainActor.run {
                     isLoading = false
                     loadFiles()

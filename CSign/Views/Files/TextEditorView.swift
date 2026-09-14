@@ -1,4 +1,5 @@
 import SwiftUI
+import NimbleViews
 
 struct TextEditorView: View {
     let fileURL: URL
