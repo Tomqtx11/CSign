@@ -79,8 +79,9 @@ struct FileManagerView: View {
                             }
                         }
                     }
+                }
             }
-                        .toolbar {
+            .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack {
                         if !isEditing {
@@ -132,32 +133,6 @@ struct FileManagerView: View {
                         }
                     }
                 }
-            }) {
-                        Text(isEditing ? "Xong" : "Sửa")
-                    }
-                }
-                
-                ToolbarItemGroup(placement: .bottomBar) {
-                    if isEditing {
-                        Button(action: {
-                            if selectedFiles.count == files.count {
-                                selectedFiles.removeAll()
-                            } else {
-                                selectedFiles = Set(files)
-                            }
-                        }) {
-                            Text("Chọn tất cả")
-                        }
-                        Spacer()
-                        Button(role: .destructive, action: {
-                            deleteSelectedFiles()
-                        }) {
-                            Image(systemName: "trash")
-                        }
-                        .disabled(selectedFiles.isEmpty)
-                    }
-                }
-            }
             }
             
             .alert("Tạo thư mục mới", isPresented: $isCreatingFolder) {
