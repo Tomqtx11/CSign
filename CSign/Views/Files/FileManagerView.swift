@@ -4,6 +4,16 @@ import UniformTypeIdentifiers
 import Zip
 import NimbleViews
 
+
+struct FileItem: Hashable, Identifiable {
+    var id: URL { url }
+    let url: URL
+    let name: String
+    let isDir: Bool
+    let size: Int64
+    let ext: String
+}
+
 struct FileManagerView: View {
     @State var currentDir: URL
     @State private var files: [URL] = []
@@ -14,6 +24,7 @@ struct FileManagerView: View {
     @State private var isHexEditing = false
 
     @State private var isLoading = false
+    @State private var loadingMessage = "Đang xử lý..."
 
     @State private var isCreatingFolder = false
     @State private var newFolderName = ""
@@ -22,7 +33,7 @@ struct FileManagerView: View {
     @State private var alertMessage = ""
     @State private var showAlert = false
     @State private var isEditing = false
-    @State private var selectedFiles = Set<URL>()
+    @State private var selectedFiles = Set<FileItem>()
 
     
     init(directory: URL? = nil) {
@@ -50,15 +61,15 @@ struct FileManagerView: View {
                             
                             FileRowView(
                                 file: file,
-                                onDelete: { deleteFile(file) },
-                                onExtract: { extractZip(file) },
-                                onCompress: { compressToIPA(file) },
+                                onDelete: { deleteFile(file.url) },
+                                onExtract: { extractZip(file.url) },
+                                onCompress: { compressToIPA(file.url) },
                                 onEdit: { 
-                                    selectedFileURL = file
+                                    selectedFileURL = file.url
                                     isEditingText = true 
                                 },
                                 onHexEdit: {
-                                    selectedFileURL = file
+                                    selectedFileURL = file.url
                                     isHexEditing = true
                                 },
                                 onClassDump: {
@@ -154,7 +165,7 @@ struct FileManagerView: View {
             .onAppear(perform: loadFiles)
             .overlay {
                 if isLoading {
-                    ProgressView(.localized("Đang xử lý..."))
+                    ProgressView(LocalizedStringKey(loadingMessage))
                         .padding()
                         .background(Color(.systemBackground).opacity(0.8))
                         .cornerRadius(10)
@@ -188,7 +199,7 @@ struct FileManagerView: View {
     
     func deleteSelectedFiles() {
         for file in selectedFiles {
-            try? FileManager.default.removeItem(at: file)
+            try? FileManager.default.removeItem(at: file.url)
         }
         selectedFiles.removeAll()
         isEditing = false
@@ -212,32 +223,45 @@ struct FileManagerView: View {
     }
 
     func loadFiles() {
-        do {
-            let contents = try FileManager.default.contentsOfDirectory(
-                at: currentDir,
-                includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey],
-                options: .skipsHiddenFiles
-            )
-            
-            let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            let filtered = contents.filter { file in
-                if currentDir == docs {
-                    let name = file.lastPathComponent
-                    let hidden = ["Archives", "Signed", "Unsigned", "Certificates"]
-                    if hidden.contains(name) || name.hasPrefix(".") {
-                        return false
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let contents = try FileManager.default.contentsOfDirectory(
+                    at: currentDir,
+                    includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey],
+                    options: .skipsHiddenFiles
+                )
+                
+                let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                var items: [FileItem] = []
+                
+                for url in contents {
+                    let name = url.lastPathComponent
+                    if currentDir == docs {
+                        let hidden = ["Archives", "Signed", "Unsigned", "Certificates"]
+                        if hidden.contains(name) || name.hasPrefix(".") {
+                            continue
+                        }
                     }
+                    
+                    let vals = try? url.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey])
+                    let isDir = vals?.isDirectory ?? false
+                    let size = Int64(vals?.fileSize ?? 0)
+                    let ext = url.pathExtension.lowercased()
+                    
+                    items.append(FileItem(url: url, name: name, isDir: isDir, size: size, ext: ext))
                 }
-                return true
+                
+                let sortedItems = items.sorted {
+                    if $0.isDir != $1.isDir { return $0.isDir }
+                    return $0.name.lowercased() < $1.name.lowercased()
+                }
+                
+                DispatchQueue.main.async {
+                    self.files = sortedItems
+                }
+            } catch {
+                print("Error loading files: \(error)")
             }
-            files = filtered.sorted { 
-                let isDir1 = (try? $0.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
-                let isDir2 = (try? $1.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
-                if isDir1 != isDir2 { return isDir1 }
-                return $0.lastPathComponent.lowercased() < $1.lastPathComponent.lowercased()
-            }
-        } catch {
-            print("Error loading files: \(error)")
         }
     }
     
@@ -268,35 +292,37 @@ struct FileManagerView: View {
     }
     
     func extractZip(_ url: URL) {
-        isLoading = true
-        Task {
+        loadingMessage = "Đang giải nén..."
+        loadingMessage = "Đang xử lý..."; isLoading = true
+        Task.detached {
             do {
-                let destFolder = currentDir.appendingPathComponent(url.deletingPathExtension().lastPathComponent)
+                let destFolder = self.currentDir.appendingPathComponent(url.deletingPathExtension().lastPathComponent)
                 try FileManager.default.createDirectory(at: destFolder, withIntermediateDirectories: true)
                 try Zip.unzipFile(url, destination: destFolder, overwrite: true, password: nil)
                 await MainActor.run {
-                    isLoading = false
-                    loadFiles()
+                    self.isLoading = false
+                    self.loadFiles()
                 }
             } catch {
-                await MainActor.run { isLoading = false }
+                await MainActor.run { self.isLoading = false }
                 print("Extract error: \(error)")
             }
         }
     }
     
     func compressToIPA(_ url: URL) {
-        isLoading = true
-        Task {
+        loadingMessage = "Đang đóng gói IPA..."
+        loadingMessage = "Đang xử lý..."; isLoading = true
+        Task.detached {
             do {
-                let ipaURL = currentDir.appendingPathComponent(url.lastPathComponent + "_Repack.ipa")
+                let ipaURL = self.currentDir.appendingPathComponent(url.lastPathComponent + "_Repack.ipa")
                 try Zip.zipFiles(paths: [url], zipFilePath: ipaURL, password: nil, compression: .DefaultCompression, progress: nil)
                 await MainActor.run {
-                    isLoading = false
-                    loadFiles()
+                    self.isLoading = false
+                    self.loadFiles()
                 }
             } catch {
-                await MainActor.run { isLoading = false }
+                await MainActor.run { self.isLoading = false }
                 print("Compress error: \(error)")
             }
         }
@@ -305,7 +331,7 @@ struct FileManagerView: View {
 
 
 struct FileRowView: View {
-    let file: URL
+    let file: FileItem
     let onDelete: () -> Void
     let onExtract: () -> Void
     let onCompress: () -> Void
@@ -314,17 +340,11 @@ struct FileRowView: View {
     let onClassDump: () -> Void
 
     
-    var isDir: Bool {
-        (try? file.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
-    }
-    
-    var ext: String {
-        file.pathExtension.lowercased()
-    }
+
     
     var body: some View {
-        if isDir {
-            NavigationLink(destination: FileManagerView(directory: file)) {
+        if file.isDir {
+            NavigationLink(destination: FileManagerView(directory: file.url)) {
                 rowContent
             }
             .contextMenu { dirMenu }
@@ -345,11 +365,11 @@ struct FileRowView: View {
                 .frame(width: 32)
             
             VStack(alignment: .leading) {
-                Text(file.lastPathComponent)
+                Text(file.name)
                     .lineLimit(1)
                 
-                if !isDir, let attr = try? FileManager.default.attributesOfItem(atPath: file.path), let size = attr[.size] as? Int64 {
-                    Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
+                if !file.isDir && file.size > 0 {
+                    Text(ByteCountFormatter.string(fromByteCount: file.size, countStyle: .file))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -358,8 +378,8 @@ struct FileRowView: View {
     }
     
     var iconName: String {
-        if isDir { return "folder.fill" }
-        switch ext {
+        if file.isDir { return "folder.fill" }
+        switch file.ext {
         case "ipa", "tipa", "zip", "deb": return "doc.zipper"
         case "plist", "json", "strings", "txt", "entitlements": return "doc.text"
         case "dylib", "bin": return "hammer.fill"
@@ -368,9 +388,9 @@ struct FileRowView: View {
     }
     
     var iconColor: Color {
-        if isDir { return .blue }
-        if ["ipa", "tipa"].contains(ext) { return .accentColor }
-        if ["dylib", "deb"].contains(ext) { return .purple }
+        if file.isDir { return .blue }
+        if ["ipa", "tipa"].contains(file.ext) { return .accentColor }
+        if ["dylib", "deb"].contains(file.ext) { return .purple }
         return .secondary
     }
     
@@ -386,19 +406,19 @@ struct FileRowView: View {
     
     @ViewBuilder
     var fileMenu: some View {
-        if ["ipa", "tipa", "zip", "deb"].contains(ext) {
+        if ["ipa", "tipa", "zip", "deb"].contains(file.ext) {
             Button(action: onExtract) {
                 Label(.localized("Giải nén"), systemImage: "doc.zipper")
             }
         }
-        if ["plist", "json", "strings", "txt", "entitlements"].contains(ext) {
+        if ["plist", "json", "strings", "txt", "entitlements"].contains(file.ext) {
             Button(action: onEdit) {
                 Label(.localized("Chỉnh sửa văn bản"), systemImage: "pencil")
             }
         }
         
         Button(action: {
-            let activityVC = UIActivityViewController(activityItems: [file], applicationActivities: nil)
+            let activityVC = UIActivityViewController(activityItems: [file.url], applicationActivities: nil)
             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                let rootVC = windowScene.windows.first?.rootViewController {
                 rootVC.present(activityVC, animated: true)
@@ -413,9 +433,9 @@ struct FileRowView: View {
     }
     
     func handleTap() {
-        if ["plist", "json", "strings", "txt", "entitlements"].contains(ext) {
+        if ["plist", "json", "strings", "txt", "entitlements"].contains(file.ext) {
             onEdit()
-        } else if ["ipa", "tipa", "zip", "deb"].contains(ext) {
+        } else if ["ipa", "tipa", "zip", "deb"].contains(file.ext) {
             onExtract()
         } else {
             onHexEdit()

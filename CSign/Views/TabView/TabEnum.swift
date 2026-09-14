@@ -75,6 +75,51 @@ enum TabEnum: String, CaseIterable, Hashable {
 
 // MARK: - History Feature
 
+
+struct DownloadRowView: View {
+    @ObservedObject var download: Download
+    
+    var displayName: String {
+        if let appName = download.sourceProvenance?.sourceAppName { return appName }
+        let name = download.fileName.replacingOccurrences(of: ".ipa", with: "", options: .caseInsensitive)
+        // If it starts with UUID-like, we can't easily strip without regex, but just stripping .ipa is good
+        return name
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(displayName)
+                .font(.headline)
+            
+            if download.isFinished {
+                Text(.localized("Hoàn tất"))
+                    .foregroundColor(.green)
+                    .font(.subheadline)
+            } else if download.error != nil {
+                Text(.localized("Lỗi tải xuống"))
+                    .foregroundColor(.red)
+                    .font(.subheadline)
+            } else {
+                ProgressView(value: download.overallProgress)
+                HStack {
+                    Text(String(format: "%.1f%%", download.overallProgress * 100))
+                    Spacer()
+                    Text("\(formatBytes(download.bytesDownloaded)) / \(formatBytes(download.totalBytes))")
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+    
+    func formatBytes(_ bytes: Int64) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: bytes)
+    }
+}
+
 struct HistoryView: View {
     @StateObject var downloadManager = DownloadManager.shared
     @StateObject var updateManager = UpdateManager.shared
