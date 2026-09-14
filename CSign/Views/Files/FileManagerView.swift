@@ -19,7 +19,7 @@ struct FileManagerView: View {
     
     var body: some View {
         NBNavigationView(currentDir.lastPathComponent) {
-            NBList {
+            NBListAdaptable {
                 if files.isEmpty {
                     Text(.localized("Thư mục trống"))
                         .foregroundColor(.secondary)
@@ -138,7 +138,7 @@ struct FileManagerView: View {
         Task {
             do {
                 let ipaURL = currentDir.appendingPathComponent(url.lastPathComponent + "_Repack.ipa")
-                try await Zip.zipFiles(paths: [url], zipFilePath: ipaURL, password: nil, compression: .DefaultCompression, progress: nil)
+                try Zip.zipFiles(paths: [url], zipFilePath: ipaURL, password: nil, compression: .DefaultCompression, progress: nil)
                 await MainActor.run {
                     isLoading = false
                     loadFiles()
