@@ -131,7 +131,7 @@ struct FileManagerView: View {
                 Button("Tạo") { createNewFolder() }
             }
             .alert("Tạo tập tin mới", isPresented: $isCreatingFile) {
-                TextField("Tên tập tin (VD: info.txt)"), text: $newFileName)
+                TextField("Tên tập tin (VD: info.txt)", text: $newFileName)
                 Button("Huỷ", role: .cancel) { newFileName = "" }
                 Button("Tạo") { createNewFile() }
             }

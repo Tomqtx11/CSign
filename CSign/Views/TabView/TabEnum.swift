@@ -106,8 +106,8 @@ struct HistoryView: View {
         NBNavigationView(selectedTab == 0 ? .localized("Lịch sử Ký") : .localized("Lịch sử Download")) {
             VStack(spacing: 0) {
                 Picker("", selection: $selectedTab) {
-                    Text(String.localized("Đã Ký")).tag(0)
-                    Text(String.localized("Tải Xuống")).tag(1)
+                    Text("Đã Ký").tag(0)
+                    Text("Tải Xuống").tag(1)
                 }
                 .pickerStyle(.segmented)
                 .padding()
@@ -195,13 +195,13 @@ struct HistoryView: View {
             if downloadManager.downloads.isEmpty {
                 if #available(iOS 17, *) {
                     ContentUnavailableView {
-                        Label(String.localized("Không có tệp tải xuống"), systemImage: "arrow.down.circle")
+                        Label("Không có tệp tải xuống", systemImage: "arrow.down.circle")
                     } description: {
-                        Text(String.localized("Các ứng dụng đang tải xuống sẽ hiển thị ở đây."))
+                        Text("Các ứng dụng đang tải xuống sẽ hiển thị ở đây.")
                     }
                 }
             } else {
-                NBSection(String.localized("Đang Tải Xuống")) {
+                NBSection("Đang Tải Xuống") {
                     ForEach(downloadManager.downloads) { dl in
                         HStack {
                             VStack(alignment: .leading, spacing: 5) {
