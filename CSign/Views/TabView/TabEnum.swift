@@ -12,6 +12,7 @@ import Combine
 enum TabEnum: String, CaseIterable, Hashable {
 	case sources
 	case library
+    case files
 	case history
 	case settings
 	case certificates
@@ -20,7 +21,8 @@ enum TabEnum: String, CaseIterable, Hashable {
 	var title: String {
 		switch self {
 		case .sources:     	return "IPA Mod"
-		case .library: 		return .localized("Library")
+		case .library: 		return .localized("Ứng dụng") // Renamed from Library to Apps
+        case .files:        return .localized("Tệp tin")
 		case .history:      return .localized("Lịch sử")
 		case .settings: 	return .localized("Settings")
 		case .certificates:	return .localized("Certificates")
@@ -32,6 +34,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 		switch self {
 		case .sources: 		return "globe.desk"
 		case .library: 		return "square.grid.2x2"
+        case .files:        return "folder"
 		case .history:      return "clock.arrow.circlepath"
 		case .settings: 	return "gearshape.2"
 		case .certificates: return "person.text.rectangle"
@@ -44,6 +47,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 		switch tab {
 		case .sources: SourcesView()
 		case .library: LibraryView()
+        case .files: FileManagerView()
 		case .history: HistoryView()
 		case .settings: SettingsView()
 		case .certificates: NBNavigationView(.localized("Certificates")) { CertificatesView() }
@@ -53,6 +57,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 	
 	static var defaultTabs: [TabEnum] {
 		return [
+            .files,
 			.library,
 			.sources,
 			.history,
