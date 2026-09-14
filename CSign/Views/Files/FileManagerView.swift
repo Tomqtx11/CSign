@@ -81,45 +81,51 @@ struct FileManagerView: View {
                     }
             }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack {
-                        if !isEditing {
-                            Menu {
-                                Button("Nhập File", systemImage: "square.and.arrow.down") { isImporting = true }
-                                Button("Tạo thư mục", systemImage: "folder.badge.plus") { isCreatingFolder = true }
-                                Button("Tạo tập tin", systemImage: "doc.badge.plus") { isCreatingFile = true }
-                            } label: {
-                                Image(systemName: "plus")
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    if !isEditing {
+                        Menu {
+                            Button(action: { isImporting = true }) {
+                                Label("Nhập File", systemImage: "square.and.arrow.down")
                             }
-                        }
-                        
-                        Button(isEditing ? "Xong" : "Sửa") {
-                            withAnimation {
-                                isEditing.toggle()
-                                if !isEditing { selectedFiles.removeAll() }
+                            Button(action: { isCreatingFolder = true }) {
+                                Label("Tạo thư mục", systemImage: "folder.badge.plus")
                             }
+                            Button(action: { isCreatingFile = true }) {
+                                Label("Tạo tập tin", systemImage: "doc.badge.plus")
+                            }
+                        } label: {
+                            Image(systemName: "plus")
                         }
+                    }
+                    
+                    Button(action: {
+                        withAnimation {
+                            isEditing.toggle()
+                            if !isEditing { selectedFiles.removeAll() }
+                        }
+                    }) {
+                        Text(isEditing ? "Xong" : "Sửa")
                     }
                 }
                 
-                if isEditing {
-                    ToolbarItem(placement: .bottomBar) {
-                        HStack {
-                            Button("Chọn tất cả") {
-                                if selectedFiles.count == files.count {
-                                    selectedFiles.removeAll()
-                                } else {
-                                    selectedFiles = Set(files)
-                                }
+                ToolbarItemGroup(placement: .bottomBar) {
+                    if isEditing {
+                        Button(action: {
+                            if selectedFiles.count == files.count {
+                                selectedFiles.removeAll()
+                            } else {
+                                selectedFiles = Set(files)
                             }
-                            Spacer()
-                            Button(role: .destructive) {
-                                deleteSelectedFiles()
-                            } label: {
-                                Image(systemName: "trash")
-                            }
-                            .disabled(selectedFiles.isEmpty)
+                        }) {
+                            Text("Chọn tất cả")
                         }
+                        Spacer()
+                        Button(role: .destructive, action: {
+                            deleteSelectedFiles()
+                        }) {
+                            Image(systemName: "trash")
+                        }
+                        .disabled(selectedFiles.isEmpty)
                     }
                 }
             }
