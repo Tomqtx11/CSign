@@ -11,6 +11,16 @@ struct FileManagerView: View {
     @State private var selectedFileURL: URL?
     @State private var isEditingText = false
     @State private var isLoading = false
+
+    @State private var isCreatingFolder = false
+    @State private var newFolderName = ""
+    @State private var isCreatingFile = false
+    @State private var newFileName = ""
+    @State private var alertMessage = ""
+    @State private var showAlert = false
+    @State private var isEditing = false
+    @State private var selectedFiles = Set<URL>()
+
     
     init(directory: URL? = nil) {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -27,26 +37,99 @@ struct FileManagerView: View {
                         .padding()
                 } else {
                     ForEach(files, id: \.self) { file in
-                        FileRowView(
-                            file: file,
-                            onDelete: { deleteFile(file) },
-                            onExtract: { extractZip(file) },
-                            onCompress: { compressToIPA(file) },
-                            onEdit: { 
-                                selectedFileURL = file
-                                isEditingText = true 
+                        HStack {
+                            if isEditing {
+                                Image(systemName: selectedFiles.contains(file) ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(selectedFiles.contains(file) ? .accentColor : .secondary)
+                                    .font(.title2)
+                                    .padding(.trailing, 8)
                             }
-                        )
+                            
+                            FileRowView(
+                                file: file,
+                                onDelete: { deleteFile(file) },
+                                onExtract: { extractZip(file) },
+                                onCompress: { compressToIPA(file) },
+                                onEdit: { 
+                                    selectedFileURL = file
+                                    isEditingText = true 
+                                }
+                            )
+                            .allowsHitTesting(!isEditing)
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if isEditing {
+                                if selectedFiles.contains(file) {
+                                    selectedFiles.remove(file)
+                                } else {
+                                    selectedFiles.insert(file)
+                                }
+                            }
+                        }
                     }
-                }
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: { isImporting = true }) {
-                        Image(systemName: "plus")
+                    HStack {
+                        if !isEditing {
+                            Menu {
+                                Button(String.localized("Nhập File"), systemImage: "square.and.arrow.down") { isImporting = true }
+                                Button(String.localized("Tạo thư mục"), systemImage: "folder.badge.plus") { isCreatingFolder = true }
+                                Button(String.localized("Tạo tập tin"), systemImage: "doc.badge.plus") { isCreatingFile = true }
+                            } label: {
+                                Image(systemName: "plus")
+                            }
+                        }
+                        
+                        Button(isEditing ? String.localized("Xong") : String.localized("Sửa")) {
+                            withAnimation {
+                                isEditing.toggle()
+                                if !isEditing { selectedFiles.removeAll() }
+                            }
+                        }
+                    }
+                }
+                
+                if isEditing {
+                    ToolbarItem(placement: .bottomBar) {
+                        HStack {
+                            Button(String.localized("Chọn tất cả")) {
+                                if selectedFiles.count == files.count {
+                                    selectedFiles.removeAll()
+                                } else {
+                                    selectedFiles = Set(files)
+                                }
+                            }
+                            Spacer()
+                            Button(role: .destructive) {
+                                deleteSelectedFiles()
+                            } label: {
+                                Image(systemName: "trash")
+                            }
+                            .disabled(selectedFiles.isEmpty)
+                        }
                     }
                 }
             }
+            }
+            
+            .alert(String.localized("Tạo thư mục mới"), isPresented: $isCreatingFolder) {
+                TextField(String.localized("Tên thư mục"), text: $newFolderName)
+                Button(String.localized("Huỷ"), role: .cancel) { newFolderName = "" }
+                Button(String.localized("Tạo")) { createNewFolder() }
+            }
+            .alert(String.localized("Tạo tập tin mới"), isPresented: $isCreatingFile) {
+                TextField(String.localized("Tên tập tin (VD: info.txt)"), text: $newFileName)
+                Button(String.localized("Huỷ"), role: .cancel) { newFileName = "" }
+                Button(String.localized("Tạo")) { createNewFile() }
+            }
+            .alert(String.localized("Thông báo"), isPresented: $showAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(alertMessage)
+            }
+
             .onAppear(perform: loadFiles)
             .overlay {
                 if isLoading {
@@ -74,6 +157,32 @@ struct FileManagerView: View {
         }
     }
     
+    
+    func deleteSelectedFiles() {
+        for file in selectedFiles {
+            try? FileManager.default.removeItem(at: file)
+        }
+        selectedFiles.removeAll()
+        isEditing = false
+        loadFiles()
+    }
+    
+    func createNewFolder() {
+        guard !newFolderName.isEmpty else { return }
+        let url = currentDir.appendingPathComponent(newFolderName)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        newFolderName = ""
+        loadFiles()
+    }
+    
+    func createNewFile() {
+        guard !newFileName.isEmpty else { return }
+        let url = currentDir.appendingPathComponent(newFileName)
+        FileManager.default.createFile(atPath: url.path, contents: nil)
+        newFileName = ""
+        loadFiles()
+    }
+
     func loadFiles() {
         do {
             let contents = try FileManager.default.contentsOfDirectory(
@@ -81,7 +190,19 @@ struct FileManagerView: View {
                 includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey],
                 options: .skipsHiddenFiles
             )
-            files = contents.sorted { 
+            
+            let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let filtered = contents.filter { file in
+                if currentDir == docs {
+                    let name = file.lastPathComponent
+                    let hidden = ["Archives", "Signed", "Unsigned", "Certificates"]
+                    if hidden.contains(name) || name.hasPrefix(".") {
+                        return false
+                    }
+                }
+                return true
+            }
+            files = filtered.sorted { 
                 let isDir1 = (try? $0.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
                 let isDir2 = (try? $1.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
                 if isDir1 != isDir2 { return isDir1 }
@@ -94,8 +215,6 @@ struct FileManagerView: View {
     
     func importFiles(_ urls: [URL]) {
         for url in urls {
-            guard url.startAccessingSecurityScopedResource() else { continue }
-            defer { url.stopAccessingSecurityScopedResource() }
             
             let dest = currentDir.appendingPathComponent(url.lastPathComponent)
             do {
@@ -106,6 +225,11 @@ struct FileManagerView: View {
             } catch {
                 print("Import error: \(error)")
             }
+        }
+        
+        if urls.count > 0 {
+            alertMessage = String.localized("Đã nhập thành công \(urls.count) tệp tin.")
+            showAlert = true
         }
         loadFiles()
     }

@@ -86,6 +86,7 @@ struct HistoryView: View {
     @State private var _editMode: EditMode = .inactive
     @State private var _searchText = ""
     @Namespace private var _namespace
+    @State private var selectedTab = 0 // 0: Lịch sử Ký, 1: Lịch sử Download
     
     @FetchRequest(
         entity: Signed.entity(),
@@ -100,52 +101,36 @@ struct HistoryView: View {
         }
     }
     
+    
     var body: some View {
-        NBNavigationView(.localized("Lịch sử Ký")) {
-            NBListAdaptable {
-                if !_filteredSignedApps.isEmpty {
-                    NBSection(
-                        .localized("Signed"),
-                        secondary: _filteredSignedApps.count.description
-                    ) {
-                        ForEach(_filteredSignedApps, id: \.uuid) { app in
-                            LibraryCellView(
-                                app: app,
-                                selectedInfoAppPresenting: $_selectedInfoAppPresenting,
-                                selectedSigningAppPresenting: $_selectedSigningAppPresenting,
-                                selectedInstallAppPresenting: $_selectedInstallAppPresenting,
-                                selectedAppUUIDs: $_selectedAppUUIDs
-                            )
-                            .compatMatchedTransitionSource(id: app.uuid ?? "", ns: _namespace)
-                        }
-                    }
+        NBNavigationView(selectedTab == 0 ? .localized("Lịch sử Ký") : .localized("Lịch sử Download")) {
+            VStack(spacing: 0) {
+                Picker("", selection: $selectedTab) {
+                    Text(String.localized("Đã Ký")).tag(0)
+                    Text(String.localized("Tải Xuống")).tag(1)
                 }
-            }
-            .searchable(text: $_searchText, placement: .platform())
-            .scrollDismissesKeyboard(.interactively)
-            .overlay {
-                if _filteredSignedApps.isEmpty {
-                    if #available(iOS 17, *) {
-                        ContentUnavailableView {
-                            Label(.localized("Chưa có lịch sử ký nào."), systemImage: "clock.badge.exclamationmark")
-                        } description: {
-                            Text(.localized("Khi bạn ký một ứng dụng, nó sẽ xuất hiện ở đây cùng với toàn bộ cấu hình đã chọn."))
-                        }
-                    }
+                .pickerStyle(.segmented)
+                .padding()
+                
+                TabView(selection: $selectedTab) {
+                    signedHistoryView.tag(0)
+                    downloadHistoryView.tag(1)
                 }
+                .tabViewStyle(.page(indexDisplayMode: .never))
             }
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    EditButton()
-                }
-                
-                if _editMode.isEditing {
-                    NBToolbarButton(
-                        .localized("Delete"),
-                        systemImage: "trash",
-                        isDisabled: _selectedAppUUIDs.isEmpty
-                    ) {
-                        _bulkDeleteSelectedApps()
+                if selectedTab == 0 {
+                    ToolbarItem(placement: .topBarLeading) {
+                        EditButton()
+                    }
+                    if _editMode.isEditing {
+                        NBToolbarButton(
+                            .localized("Delete"),
+                            systemImage: "trash",
+                            isDisabled: _selectedAppUUIDs.isEmpty
+                        ) {
+                            _bulkDeleteSelectedApps()
+                        }
                     }
                 }
             }
@@ -170,6 +155,84 @@ struct HistoryView: View {
         }
     }
     
+    var signedHistoryView: some View {
+        NBListAdaptable {
+            if !_filteredSignedApps.isEmpty {
+                NBSection(
+                    .localized("Signed"),
+                    secondary: _filteredSignedApps.count.description
+                ) {
+                    ForEach(_filteredSignedApps, id: \.uuid) { app in
+                        LibraryCellView(
+                            app: app,
+                            selectedInfoAppPresenting: $_selectedInfoAppPresenting,
+                            selectedSigningAppPresenting: $_selectedSigningAppPresenting,
+                            selectedInstallAppPresenting: $_selectedInstallAppPresenting,
+                            selectedAppUUIDs: $_selectedAppUUIDs
+                        )
+                        .compatMatchedTransitionSource(id: app.uuid ?? "", ns: _namespace)
+                    }
+                }
+            }
+        }
+        .searchable(text: $_searchText, placement: .platform())
+        .scrollDismissesKeyboard(.interactively)
+        .overlay {
+            if _filteredSignedApps.isEmpty {
+                if #available(iOS 17, *) {
+                    ContentUnavailableView {
+                        Label(.localized("Chưa có lịch sử ký nào."), systemImage: "clock.badge.exclamationmark")
+                    } description: {
+                        Text(.localized("Khi bạn ký một ứng dụng, nó sẽ xuất hiện ở đây cùng với toàn bộ cấu hình đã chọn."))
+                    }
+                }
+            }
+        }
+    }
+    
+    var downloadHistoryView: some View {
+        NBListAdaptable {
+            if downloadManager.downloads.isEmpty {
+                if #available(iOS 17, *) {
+                    ContentUnavailableView {
+                        Label(String.localized("Không có tệp tải xuống"), systemImage: "arrow.down.circle")
+                    } description: {
+                        Text(String.localized("Các ứng dụng đang tải xuống sẽ hiển thị ở đây."))
+                    }
+                }
+            } else {
+                NBSection(String.localized("Đang Tải Xuống")) {
+                    ForEach(downloadManager.downloads) { dl in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text(dl.fileName).font(.headline)
+                                ProgressView(value: dl.overallProgress)
+                                HStack {
+                                    Text("\(Int(dl.overallProgress * 100))%")
+                                        .font(.caption).foregroundColor(.secondary)
+                                    Spacer()
+                                    if dl.totalBytes > 0 {
+                                        Text("\(ByteCountFormatter.string(fromByteCount: dl.bytesDownloaded, countStyle: .file)) / \(ByteCountFormatter.string(fromByteCount: dl.totalBytes, countStyle: .file))")
+                                            .font(.caption).foregroundColor(.secondary)
+                                    }
+                                }
+                            }
+                            Spacer()
+                            Button(role: .destructive) {
+                                downloadManager.cancelDownload(dl)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+            }
+        }
+    }
+
+
     private func _bulkDeleteSelectedApps() {
         let selectedApps = _filteredSignedApps.filter { app in
             guard let uuid = app.uuid else { return false }
