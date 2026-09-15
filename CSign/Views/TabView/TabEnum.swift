@@ -47,7 +47,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 		switch tab {
 		case .sources: SourcesView()
 		case .library: LibraryView()
-        case .files: FileManagerView()
+        case .files: NBNavigationView(.localized("Tệp tin")) { FileManagerView() }
 		case .history: HistoryView()
 		case .settings: SettingsView()
 		case .certificates: NBNavigationView(.localized("Certificates")) { CertificatesView() }

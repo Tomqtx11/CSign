@@ -213,7 +213,7 @@ struct HexEditorView: View {
         let query = searchString
         let url = fileURL
         
-        Task.detached {
+        DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let handle = try FileHandle(forReadingFrom: url)
                 defer { try? handle.close() }
@@ -236,7 +236,7 @@ struct HexEditorView: View {
                 }
                 
                 guard !targetData.isEmpty else {
-                    await MainActor.run {
+                    DispatchQueue.main.async {
                         self.isSearching = false
                         self.searchError = "Dữ liệu tìm kiếm không hợp lệ"
                         self.showSearchSheet = true
@@ -263,7 +263,7 @@ struct HexEditorView: View {
                     currentOffset += UInt64(chunkSize)
                 }
                 
-                await MainActor.run {
+                DispatchQueue.main.async {
                     self.isSearching = false
                     if let found = foundOffset {
                         self.searchResultOffset = found
@@ -275,7 +275,7 @@ struct HexEditorView: View {
                 }
                 
             } catch {
-                await MainActor.run {
+                DispatchQueue.main.async {
                     self.isSearching = false
                     self.searchError = "Lỗi đọc file"
                     self.showSearchSheet = true

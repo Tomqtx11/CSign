@@ -46,7 +46,7 @@ struct FileManagerView: View {
     }
     
     var body: some View {
-        NBNavigationView(currentDir.lastPathComponent) {
+        Group {
             NBListAdaptable {
                 if files.isEmpty {
                     Text(.localized("Thư mục trống"))
@@ -243,21 +243,23 @@ struct FileManagerView: View {
             }
             
             // Hidden NavigationLink for Hex Editor push navigation
-            .background(
-                NavigationLink(
-                    destination: Group {
-                        if let url = selectedFileURL {
-                            HexEditorView(fileURL: url)
-                        }
-                    },
-                    isActive: $navigateToHexEditor
-                ) {
-                    EmptyView()
-                }
-                .hidden()
-            )
-
+            NavigationLink(
+                destination: Group {
+                    if let url = selectedFileURL {
+                        HexEditorView(fileURL: url)
+                    }
+                },
+                isActive: $navigateToHexEditor
+            ) {
+                EmptyView()
+            }
+            .hidden()
         }
+        .navigationTitle(
+            currentDir == FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0] 
+            ? String.localized("Tệp tin") 
+            : currentDir.lastPathComponent
+        )
     }
     
     // MARK: - Row Content
@@ -387,10 +389,11 @@ struct FileManagerView: View {
     }
 
     func loadFiles() {
+        let current = self.currentDir
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let contents = try FileManager.default.contentsOfDirectory(
-                    at: currentDir,
+                    at: current,
                     includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey],
                     options: .skipsHiddenFiles
                 )
@@ -400,7 +403,7 @@ struct FileManagerView: View {
                 
                 for url in contents {
                     let name = url.lastPathComponent
-                    if currentDir == docs {
+                    if current == docs {
                         let hidden = ["Archives", "Signed", "Unsigned", "Certificates"]
                         if hidden.contains(name) || name.hasPrefix(".") {
                             continue
@@ -458,19 +461,20 @@ struct FileManagerView: View {
     func extractZip(_ url: URL) {
         loadingMessage = "Đang giải nén..."
         isLoading = true
-        Task.detached {
+        let current = self.currentDir
+        DispatchQueue.global(qos: .userInitiated).async {
             do {
-                let destFolder = self.currentDir.appendingPathComponent(url.deletingPathExtension().lastPathComponent)
+                let destFolder = current.appendingPathComponent(url.deletingPathExtension().lastPathComponent)
                 try FileManager.default.createDirectory(at: destFolder, withIntermediateDirectories: true)
                 try Zip.unzipFile(url, destination: destFolder, overwrite: true, password: nil)
-                await MainActor.run {
+                DispatchQueue.main.async {
                     self.isLoading = false
                     self.alertMessage = "Giải nén thành công!"
                     self.showAlert = true
                     self.loadFiles()
                 }
             } catch {
-                await MainActor.run {
+                DispatchQueue.main.async {
                     self.isLoading = false
                     self.alertMessage = "Lỗi giải nén: \(error.localizedDescription)"
                     self.showAlert = true
@@ -483,18 +487,19 @@ struct FileManagerView: View {
     func compressToIPA(_ url: URL) {
         loadingMessage = "Đang đóng gói IPA..."
         isLoading = true
-        Task.detached {
+        let current = self.currentDir
+        DispatchQueue.global(qos: .userInitiated).async {
             do {
-                let ipaURL = self.currentDir.appendingPathComponent(url.lastPathComponent + "_Repack.ipa")
+                let ipaURL = current.appendingPathComponent(url.lastPathComponent + "_Repack.ipa")
                 try Zip.zipFiles(paths: [url], zipFilePath: ipaURL, password: nil, compression: .DefaultCompression, progress: nil)
-                await MainActor.run {
+                DispatchQueue.main.async {
                     self.isLoading = false
                     self.alertMessage = "Đóng gói thành công!"
                     self.showAlert = true
                     self.loadFiles()
                 }
             } catch {
-                await MainActor.run {
+                DispatchQueue.main.async {
                     self.isLoading = false
                     self.alertMessage = "Lỗi đóng gói: \(error.localizedDescription)"
                     self.showAlert = true
