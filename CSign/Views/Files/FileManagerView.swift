@@ -21,7 +21,7 @@ struct FileManagerView: View {
 
     @State private var selectedFileURL: URL?
     @State private var isEditingText = false
-    @State private var isHexEditing = false
+    @State private var navigateToHexEditor = false
 
     @State private var isLoading = false
     @State private var loadingMessage = "Đang xử lý..."
@@ -34,6 +34,10 @@ struct FileManagerView: View {
     @State private var showAlert = false
     @State private var isEditing = false
     @State private var selectedFiles = Set<FileItem>()
+    
+    // File action sheet
+    @State private var showFileActions = false
+    @State private var actionFile: FileItem?
 
     
     init(directory: URL? = nil) {
@@ -59,25 +63,24 @@ struct FileManagerView: View {
                                     .padding(.trailing, 8)
                             }
                             
-                            FileRowView(
-                                file: file,
-                                onDelete: { deleteFile(file.url) },
-                                onExtract: { extractZip(file.url) },
-                                onCompress: { compressToIPA(file.url) },
-                                onEdit: { 
-                                    selectedFileURL = file.url
-                                    isEditingText = true 
-                                },
-                                onHexEdit: {
-                                    selectedFileURL = file.url
-                                    isHexEditing = true
-                                },
-                                onClassDump: {
-                                    alertMessage = "Tính năng Class Dump đang được phát triển."
-                                    showAlert = true
+                            if file.isDir {
+                                NavigationLink(destination: FileManagerView(directory: file.url)) {
+                                    fileRowContent(file: file)
                                 }
-                            )
-                            .allowsHitTesting(!isEditing)
+                                .contextMenu { dirContextMenu(file: file) }
+                                .allowsHitTesting(!isEditing)
+                            } else {
+                                fileRowContent(file: file)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        if !isEditing {
+                                            actionFile = file
+                                            showFileActions = true
+                                        }
+                                    }
+                                    .contextMenu { fileContextMenu(file: file) }
+                                    .allowsHitTesting(!isEditing)
+                            }
                         }
                         .contentShape(Rectangle())
                         .onTapGesture {
@@ -165,10 +168,17 @@ struct FileManagerView: View {
             .onAppear(perform: loadFiles)
             .overlay {
                 if isLoading {
-                    ProgressView(LocalizedStringKey(loadingMessage))
-                        .padding()
-                        .background(Color(.systemBackground).opacity(0.8))
-                        .cornerRadius(10)
+                    VStack(spacing: 12) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                        Text(loadingMessage)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(24)
+                    .background(Color(.systemBackground).opacity(0.95))
+                    .cornerRadius(12)
+                    .shadow(radius: 5)
                 }
             }
             .sheet(isPresented: $isImporting) {
@@ -187,15 +197,169 @@ struct FileManagerView: View {
                     TextEditorView(fileURL: url)
                 }
             }
-            .sheet(isPresented: $isHexEditing) {
-                if let url = selectedFileURL {
-                    HexEditorView(fileURL: url)
+            
+            // File action sheet
+            .confirmationDialog(
+                actionFile?.name ?? "File",
+                isPresented: $showFileActions,
+                titleVisibility: .visible
+            ) {
+                if let file = actionFile {
+                    let textExts = ["plist", "json", "strings", "txt", "entitlements", "xml", "html", "css", "js", "swift", "m", "h", "c", "cpp", "py", "sh", "md"]
+                    let archiveExts = ["ipa", "tipa", "zip", "deb"]
+                    
+                    if textExts.contains(file.ext) {
+                        Button("Chỉnh sửa văn bản") {
+                            selectedFileURL = file.url
+                            isEditingText = true
+                        }
+                    }
+                    
+                    if archiveExts.contains(file.ext) {
+                        Button("Giải nén") {
+                            extractZip(file.url)
+                        }
+                    }
+                    
+                    Button("Hex Editor") {
+                        selectedFileURL = file.url
+                        navigateToHexEditor = true
+                    }
+                    
+                    Button("Chia sẻ") {
+                        shareFile(file.url)
+                    }
+                    
+                    Button("Sao chép") {
+                        UIPasteboard.general.url = file.url
+                        alertMessage = "Đã sao chép đường dẫn file."
+                        showAlert = true
+                    }
+                    
+                    Button("Xoá", role: .destructive) {
+                        deleteFile(file.url)
+                    }
                 }
             }
+            
+            // Hidden NavigationLink for Hex Editor push navigation
+            .background(
+                NavigationLink(
+                    destination: Group {
+                        if let url = selectedFileURL {
+                            HexEditorView(fileURL: url)
+                        }
+                    },
+                    isActive: $navigateToHexEditor
+                ) {
+                    EmptyView()
+                }
+                .hidden()
+            )
 
         }
     }
     
+    // MARK: - Row Content
+    
+    func fileRowContent(file: FileItem) -> some View {
+        HStack {
+            Image(systemName: iconName(for: file))
+                .foregroundColor(iconColor(for: file))
+                .font(.title2)
+                .frame(width: 32)
+            
+            VStack(alignment: .leading) {
+                Text(file.name)
+                    .lineLimit(1)
+                
+                if !file.isDir && file.size > 0 {
+                    Text(ByteCountFormatter.string(fromByteCount: file.size, countStyle: .file))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+    
+    func iconName(for file: FileItem) -> String {
+        if file.isDir { return "folder.fill" }
+        switch file.ext {
+        case "ipa", "tipa", "zip", "deb": return "doc.zipper"
+        case "plist", "json", "strings", "txt", "entitlements", "xml", "html", "css", "js", "swift", "m", "h", "c", "cpp", "py", "sh", "md": return "doc.text"
+        case "dylib", "bin", "framework": return "hammer.fill"
+        case "png", "jpg", "jpeg", "gif", "webp", "svg": return "photo"
+        default: return "doc"
+        }
+    }
+    
+    func iconColor(for file: FileItem) -> Color {
+        if file.isDir { return .blue }
+        if ["ipa", "tipa"].contains(file.ext) { return .accentColor }
+        if ["dylib", "deb"].contains(file.ext) { return .purple }
+        if ["png", "jpg", "jpeg", "gif"].contains(file.ext) { return .pink }
+        return .secondary
+    }
+    
+    // MARK: - Context Menus
+    
+    @ViewBuilder
+    func dirContextMenu(file: FileItem) -> some View {
+        Button(action: { compressToIPA(file.url) }) {
+            Label("Đóng gói thành IPA/ZIP", systemImage: "archivebox")
+        }
+        Button(action: { shareFile(file.url) }) {
+            Label("Chia sẻ", systemImage: "square.and.arrow.up")
+        }
+        Button(role: .destructive, action: { deleteFile(file.url) }) {
+            Label("Xoá", systemImage: "trash")
+        }
+    }
+    
+    @ViewBuilder
+    func fileContextMenu(file: FileItem) -> some View {
+        let textExts = ["plist", "json", "strings", "txt", "entitlements", "xml", "html", "css", "js"]
+        let archiveExts = ["ipa", "tipa", "zip", "deb"]
+        
+        if archiveExts.contains(file.ext) {
+            Button(action: { extractZip(file.url) }) {
+                Label("Giải nén", systemImage: "doc.zipper")
+            }
+        }
+        if textExts.contains(file.ext) {
+            Button(action: {
+                selectedFileURL = file.url
+                isEditingText = true
+            }) {
+                Label("Chỉnh sửa văn bản", systemImage: "pencil")
+            }
+        }
+        
+        Button(action: {
+            selectedFileURL = file.url
+            navigateToHexEditor = true
+        }) {
+            Label("Hex Editor", systemImage: "chevron.left.forwardslash.chevron.right")
+        }
+        
+        Button(action: { shareFile(file.url) }) {
+            Label("Chia sẻ", systemImage: "square.and.arrow.up")
+        }
+        
+        Button(role: .destructive, action: { deleteFile(file.url) }) {
+            Label("Xoá", systemImage: "trash")
+        }
+    }
+    
+    // MARK: - Actions
+    
+    func shareFile(_ url: URL) {
+        let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            rootVC.present(activityVC, animated: true)
+        }
+    }
     
     func deleteSelectedFiles() {
         for file in selectedFiles {
@@ -293,7 +457,7 @@ struct FileManagerView: View {
     
     func extractZip(_ url: URL) {
         loadingMessage = "Đang giải nén..."
-        loadingMessage = "Đang xử lý..."; isLoading = true
+        isLoading = true
         Task.detached {
             do {
                 let destFolder = self.currentDir.appendingPathComponent(url.deletingPathExtension().lastPathComponent)
@@ -301,10 +465,16 @@ struct FileManagerView: View {
                 try Zip.unzipFile(url, destination: destFolder, overwrite: true, password: nil)
                 await MainActor.run {
                     self.isLoading = false
+                    self.alertMessage = "Giải nén thành công!"
+                    self.showAlert = true
                     self.loadFiles()
                 }
             } catch {
-                await MainActor.run { self.isLoading = false }
+                await MainActor.run {
+                    self.isLoading = false
+                    self.alertMessage = "Lỗi giải nén: \(error.localizedDescription)"
+                    self.showAlert = true
+                }
                 print("Extract error: \(error)")
             }
         }
@@ -312,133 +482,25 @@ struct FileManagerView: View {
     
     func compressToIPA(_ url: URL) {
         loadingMessage = "Đang đóng gói IPA..."
-        loadingMessage = "Đang xử lý..."; isLoading = true
+        isLoading = true
         Task.detached {
             do {
                 let ipaURL = self.currentDir.appendingPathComponent(url.lastPathComponent + "_Repack.ipa")
                 try Zip.zipFiles(paths: [url], zipFilePath: ipaURL, password: nil, compression: .DefaultCompression, progress: nil)
                 await MainActor.run {
                     self.isLoading = false
+                    self.alertMessage = "Đóng gói thành công!"
+                    self.showAlert = true
                     self.loadFiles()
                 }
             } catch {
-                await MainActor.run { self.isLoading = false }
+                await MainActor.run {
+                    self.isLoading = false
+                    self.alertMessage = "Lỗi đóng gói: \(error.localizedDescription)"
+                    self.showAlert = true
+                }
                 print("Compress error: \(error)")
             }
-        }
-    }
-}
-
-
-struct FileRowView: View {
-    let file: FileItem
-    let onDelete: () -> Void
-    let onExtract: () -> Void
-    let onCompress: () -> Void
-    let onEdit: () -> Void
-    let onHexEdit: () -> Void
-    let onClassDump: () -> Void
-
-    
-
-    
-    var body: some View {
-        if file.isDir {
-            NavigationLink(destination: FileManagerView(directory: file.url)) {
-                rowContent
-            }
-            .contextMenu { dirMenu }
-        } else {
-            rowContent
-                .contextMenu { fileMenu }
-                .onTapGesture {
-                    handleTap()
-                }
-        }
-    }
-    
-    var rowContent: some View {
-        HStack {
-            Image(systemName: iconName)
-                .foregroundColor(iconColor)
-                .font(.title2)
-                .frame(width: 32)
-            
-            VStack(alignment: .leading) {
-                Text(file.name)
-                    .lineLimit(1)
-                
-                if !file.isDir && file.size > 0 {
-                    Text(ByteCountFormatter.string(fromByteCount: file.size, countStyle: .file))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-    }
-    
-    var iconName: String {
-        if file.isDir { return "folder.fill" }
-        switch file.ext {
-        case "ipa", "tipa", "zip", "deb": return "doc.zipper"
-        case "plist", "json", "strings", "txt", "entitlements": return "doc.text"
-        case "dylib", "bin": return "hammer.fill"
-        default: return "doc"
-        }
-    }
-    
-    var iconColor: Color {
-        if file.isDir { return .blue }
-        if ["ipa", "tipa"].contains(file.ext) { return .accentColor }
-        if ["dylib", "deb"].contains(file.ext) { return .purple }
-        return .secondary
-    }
-    
-    @ViewBuilder
-    var dirMenu: some View {
-        Button(action: onCompress) {
-            Label(.localized("Đóng gói thành IPA/ZIP"), systemImage: "archivebox")
-        }
-        Button(role: .destructive, action: onDelete) {
-            Label(.localized("Xoá"), systemImage: "trash")
-        }
-    }
-    
-    @ViewBuilder
-    var fileMenu: some View {
-        if ["ipa", "tipa", "zip", "deb"].contains(file.ext) {
-            Button(action: onExtract) {
-                Label(.localized("Giải nén"), systemImage: "doc.zipper")
-            }
-        }
-        if ["plist", "json", "strings", "txt", "entitlements"].contains(file.ext) {
-            Button(action: onEdit) {
-                Label(.localized("Chỉnh sửa văn bản"), systemImage: "pencil")
-            }
-        }
-        
-        Button(action: {
-            let activityVC = UIActivityViewController(activityItems: [file.url], applicationActivities: nil)
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let rootVC = windowScene.windows.first?.rootViewController {
-                rootVC.present(activityVC, animated: true)
-            }
-        }) {
-            Label(.localized("Chia sẻ"), systemImage: "square.and.arrow.up")
-        }
-        
-        Button(role: .destructive, action: onDelete) {
-            Label(.localized("Xoá"), systemImage: "trash")
-        }
-    }
-    
-    func handleTap() {
-        if ["plist", "json", "strings", "txt", "entitlements"].contains(file.ext) {
-            onEdit()
-        } else if ["ipa", "tipa", "zip", "deb"].contains(file.ext) {
-            onExtract()
-        } else {
-            onHexEdit()
         }
     }
 }

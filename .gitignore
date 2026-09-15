@@ -6,3 +6,13 @@ xcuserdata/
 deps
 cert.json
 _build
+apps_cache.json
+*.py
+*.rb
+*.log
+*.txt
+apps_cache.json
+apptesters*.json
+wait_for_build.sh
+test.swift
+job*

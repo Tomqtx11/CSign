@@ -15,93 +15,161 @@ struct HexEditorView: View {
     @State private var searchType = 0 // 0: Hex, 1: String
     @State private var searchString = ""
     @State private var searchResultOffset: UInt64?
+    @State private var searchResultLineIndex: Int?
     @State private var searchError = ""
-    @State private var showSearchAlert = false
+    @State private var showSearchSheet = false
+    
+    // Go to offset
+    @State private var showGoToOffset = false
+    @State private var goToOffsetString = ""
     
     let bytesPerLine = 16
     
+    var fileSizeText: String {
+        ByteCountFormatter.string(fromByteCount: Int64(fileSize), countStyle: .file)
+    }
+    
     var body: some View {
-        NavigationView {
-            Group {
-                if let error = errorMessage {
-                    Text(error).foregroundColor(.red).padding()
-                } else if fileHandle == nil {
-                    ProgressView(.localized("Đang mở tệp..."))
-                } else {
+        Group {
+            if let error = errorMessage {
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.largeTitle)
+                        .foregroundColor(.red)
+                    Text(error)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                }
+            } else if fileHandle == nil {
+                ProgressView("Đang mở tệp...")
+            } else {
+                VStack(spacing: 0) {
+                    // Header row like ESign
+                    HStack(spacing: 0) {
+                        Text("Offset")
+                            .frame(width: 70, alignment: .leading)
+                        Text("00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Text("ASCII")
+                            .frame(width: 90, alignment: .center)
+                    }
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(Color(.systemGray6))
+                    
+                    Divider()
+                    
+                    // File info bar
+                    HStack {
+                        Text(fileURL.lastPathComponent)
+                            .font(.caption2)
+                            .lineLimit(1)
+                        Spacer()
+                        Text(fileSizeText)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color(.systemGray6).opacity(0.5))
+                    
+                    Divider()
+                    
+                    // Hex content
                     ScrollViewReader { proxy in
                         List {
                             ForEach(0..<visibleLines, id: \.self) { lineIndex in
-                                HexLineView(fileHandle: fileHandle!, lineIndex: lineIndex, bytesPerLine: bytesPerLine, fileURL: fileURL)
-                                    .id(lineIndex)
+                                HexLineView(
+                                    fileHandle: fileHandle!,
+                                    lineIndex: lineIndex,
+                                    bytesPerLine: bytesPerLine,
+                                    fileURL: fileURL,
+                                    isHighlighted: lineIndex == searchResultLineIndex
+                                )
+                                .id(lineIndex)
+                                .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
+                                .listRowSeparator(.hidden)
                             }
                         }
                         .listStyle(.plain)
-                        .environment(\.defaultMinListRowHeight, 20)
-                        .onChange(of: searchResultOffset) { offset in
-                            if let offset = offset {
-                                let targetLine = Int(offset) / bytesPerLine
+                        .environment(\.defaultMinListRowHeight, 22)
+                        .onChange(of: searchResultLineIndex) { lineIdx in
+                            if let lineIdx = lineIdx {
                                 withAnimation {
-                                    proxy.scrollTo(targetLine, anchor: .center)
+                                    proxy.scrollTo(lineIdx, anchor: .center)
                                 }
                             }
                         }
                     }
                 }
             }
-            .navigationTitle(fileURL.lastPathComponent)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(.localized("Đóng")) {
-                        try? fileHandle?.close()
-                        dismiss()
+        }
+        .navigationTitle(fileURL.lastPathComponent)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button(action: { showSearchSheet = true }) {
+                        Label("Tìm kiếm", systemImage: "magnifyingglass")
+                    }
+                    Button(action: { showGoToOffset = true }) {
+                        Label("Đi đến Offset", systemImage: "arrow.right.to.line")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+        .onAppear(perform: loadFile)
+        .sheet(isPresented: $showSearchSheet) {
+            NavigationView {
+                Form {
+                    Section(header: Text("Tìm kiếm")) {
+                        Picker("Loại", selection: $searchType) {
+                            Text("Hex").tag(0)
+                            Text("String").tag(1)
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                        
+                        TextField(searchType == 0 ? "VD: 4A 5B 00 FF" : "Nhập chuỗi...", text: $searchString)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                        
+                        if !searchError.isEmpty {
+                            Text(searchError).foregroundColor(.red).font(.caption)
+                        }
                     }
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: { showSearchAlert = true }) {
-                        Image(systemName: "magnifyingglass")
+                .navigationTitle("Tìm kiếm")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Huỷ") { showSearchSheet = false }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Tìm") {
+                            performSearch()
+                        }
                     }
                 }
             }
-            .onAppear(perform: loadFile)
-            .sheet(isPresented: $showSearchAlert) {
-                NavigationView {
-                    Form {
-                        Section(header: Text(.localized("Tìm kiếm (Search)"))) {
-                            Picker("Loại", selection: $searchType) {
-                                Text("Chuỗi (String)").tag(1)
-                                Text("Mã Hex (Hex)").tag(0)
-                            }
-                            .pickerStyle(SegmentedPickerStyle())
-                            
-                            TextField(searchType == 0 ? "Nhập Hex (VD: 4A 5B 00)" : "Nhập chuỗi...", text: $searchString)
-                            
-                            if !searchError.isEmpty {
-                                Text(searchError).foregroundColor(.red).font(.caption)
-                            }
-                        }
-                    }
-                    .navigationTitle(.localized("Tìm kiếm"))
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button(.localized("Huỷ")) { showSearchAlert = false }
-                        }
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button(.localized("Tìm")) {
-                                performSearch()
-                            }
-                        }
-                    }
-                }
-            }
-            .overlay {
-                if isSearching {
-                    ProgressView(.localized("Đang tìm kiếm..."))
-                        .padding()
-                        .background(Color(.systemBackground).opacity(0.8))
-                        .cornerRadius(10)
-                }
+        }
+        .alert("Đi đến Offset", isPresented: $showGoToOffset) {
+            TextField("VD: 0x1A00 hoặc 6656", text: $goToOffsetString)
+                .autocapitalization(.none)
+            Button("Huỷ", role: .cancel) { }
+            Button("Đi") { goToOffset() }
+        }
+        .overlay {
+            if isSearching {
+                ProgressView("Đang tìm kiếm...")
+                    .padding()
+                    .background(Color(.systemBackground).opacity(0.9))
+                    .cornerRadius(10)
+                    .shadow(radius: 5)
             }
         }
     }
@@ -111,15 +179,33 @@ struct HexEditorView: View {
             let attrs = try FileManager.default.attributesOfItem(atPath: fileURL.path)
             fileSize = attrs[.size] as? UInt64 ?? 0
             visibleLines = Int(ceil(Double(fileSize) / Double(bytesPerLine)))
-            fileHandle = try FileHandle(forUpdating: fileURL) // Changed to updating so we can write
+            fileHandle = try FileHandle(forUpdating: fileURL)
         } catch {
             errorMessage = "Lỗi đọc file: \(error.localizedDescription)"
         }
     }
     
+    func goToOffset() {
+        let str = goToOffsetString.trimmingCharacters(in: .whitespaces)
+        var offset: UInt64 = 0
+        
+        if str.lowercased().hasPrefix("0x") {
+            let hexPart = String(str.dropFirst(2))
+            offset = UInt64(hexPart, radix: 16) ?? 0
+        } else {
+            offset = UInt64(str) ?? 0
+        }
+        
+        let targetLine = Int(offset) / bytesPerLine
+        if targetLine < visibleLines {
+            searchResultLineIndex = targetLine
+        }
+        goToOffsetString = ""
+    }
+    
     func performSearch() {
         guard !searchString.isEmpty else { return }
-        showSearchAlert = false
+        showSearchSheet = false
         isSearching = true
         searchError = ""
         
@@ -150,16 +236,15 @@ struct HexEditorView: View {
                 }
                 
                 guard !targetData.isEmpty else {
-                    await MainActor.run { 
+                    await MainActor.run {
                         self.isSearching = false
                         self.searchError = "Dữ liệu tìm kiếm không hợp lệ"
-                        self.showSearchAlert = true
+                        self.showSearchSheet = true
                     }
                     return
                 }
                 
-                // Chunked reading for large files
-                let chunkSize = 1024 * 1024 * 5 // 5MB chunks
+                let chunkSize = 1024 * 1024 * 5
                 let overlap = targetData.count - 1
                 
                 var currentOffset: UInt64 = 0
@@ -182,9 +267,10 @@ struct HexEditorView: View {
                     self.isSearching = false
                     if let found = foundOffset {
                         self.searchResultOffset = found
+                        self.searchResultLineIndex = Int(found) / self.bytesPerLine
                     } else {
                         self.searchError = "Không tìm thấy"
-                        self.showSearchAlert = true
+                        self.showSearchSheet = true
                     }
                 }
                 
@@ -192,7 +278,7 @@ struct HexEditorView: View {
                 await MainActor.run {
                     self.isSearching = false
                     self.searchError = "Lỗi đọc file"
-                    self.showSearchAlert = true
+                    self.showSearchSheet = true
                 }
             }
         }
@@ -204,47 +290,56 @@ struct HexLineView: View {
     let lineIndex: Int
     let bytesPerLine: Int
     let fileURL: URL
+    var isHighlighted: Bool = false
     
     @State private var offsetString: String = ""
-    @State private var hexString: String = ""
+    @State private var hexParts: [String] = []
     @State private var asciiString: String = ""
+    @State private var dataBytes: Data = Data()
     
     @State private var showEditAlert = false
     @State private var editHexString = ""
-    @State private var updateTrigger = false // Used to refresh view after edit
+    @State private var updateTrigger = false
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 0) {
+            // Offset column
             Text(offsetString)
-                .font(.system(size: 12, weight: .bold, design: .monospaced))
-                .foregroundColor(.secondary)
-                .frame(width: 80, alignment: .leading)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundColor(.orange)
+                .frame(width: 70, alignment: .leading)
             
-            Text(hexString)
-                .font(.system(size: 12, design: .monospaced))
+            // Hex bytes
+            Text(hexParts.joined(separator: " "))
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
+            // ASCII column
             Text(asciiString)
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundColor(.blue)
-                .frame(width: 100, alignment: .trailing)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(.green)
+                .frame(width: 90, alignment: .leading)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 1)
+        .background(isHighlighted ? Color.yellow.opacity(0.3) : Color.clear)
         .contentShape(Rectangle())
         .onTapGesture {
-            editHexString = hexString.trimmingCharacters(in: .whitespaces)
+            editHexString = hexParts.joined(separator: " ")
             showEditAlert = true
         }
         .onAppear(perform: loadData)
         .onChange(of: updateTrigger) { _ in loadData() }
-        .alert(.localized("Sửa mã Hex (Edit Hex)"), isPresented: $showEditAlert) {
-            TextField("Hex", text: $editHexString)
-            Button(.localized("Huỷ"), role: .cancel) { }
-            Button(.localized("Lưu")) {
+        .alert("Sửa Hex tại \(offsetString)", isPresented: $showEditAlert) {
+            TextField("Hex bytes", text: $editHexString)
+                .autocapitalization(.none)
+                .disableAutocorrection(true)
+            Button("Huỷ", role: .cancel) { }
+            Button("Lưu") {
                 saveHexData()
             }
         } message: {
-            Text(.localized("Chỉnh sửa các byte Hex tại offset \(offsetString)"))
+            Text("Chỉnh sửa các byte hex. Các byte cách nhau bằng dấu cách.")
         }
     }
     
@@ -255,14 +350,15 @@ struct HexLineView: View {
         do {
             try fileHandle.seek(toOffset: offset)
             let data = fileHandle.readData(ofLength: bytesPerLine)
+            dataBytes = data
             
-            var hex = ""
+            var parts: [String] = []
             var ascii = ""
             
             for i in 0..<bytesPerLine {
                 if i < data.count {
                     let byte = data[i]
-                    hex += String(format: "%02X ", byte)
+                    parts.append(String(format: "%02X", byte))
                     
                     if byte >= 32 && byte <= 126 {
                         ascii += String(Character(UnicodeScalar(byte)))
@@ -270,15 +366,15 @@ struct HexLineView: View {
                         ascii += "."
                     }
                 } else {
-                    hex += "   "
+                    parts.append("  ")
                     ascii += " "
                 }
             }
             
-            hexString = hex
+            hexParts = parts
             asciiString = ascii
         } catch {
-            hexString = "ERROR"
+            hexParts = ["ERROR"]
         }
     }
     
