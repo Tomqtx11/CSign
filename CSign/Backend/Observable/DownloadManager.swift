@@ -49,6 +49,7 @@ class Download: Identifiable, ObservableObject, @unchecked Sendable {
 }
 
 class DownloadManager: NSObject, ObservableObject {
+	var _lastDlProgressTime: [String: CFAbsoluteTime] = [:]
 	static let shared = DownloadManager()
 	
 	@Published var downloads: [Download] = []
@@ -242,8 +243,6 @@ extension DownloadManager: URLSessionDownloadDelegate {
 			print("Error handling downloaded file: \(error.localizedDescription)")
 		}
 	}
-	
-	private var _lastDlProgressTime: [String: CFAbsoluteTime] = [:]
 	
 	func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
 		guard let download = getDownloadTask(by: downloadTask) else { return }

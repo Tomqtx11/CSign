@@ -10,6 +10,7 @@ import Zip
 import SwiftUI
 
 final class AppFileHandler: NSObject, @unchecked Sendable {
+	var _lastProgressTime: CFAbsoluteTime = 0
 	private let _fileManager = FileManager.default
 	private let _uuid = UUID().uuidString
 	private let _uniqueWorkDir: URL
