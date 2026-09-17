@@ -12,7 +12,6 @@ import Combine
 enum TabEnum: String, CaseIterable, Hashable {
 	case sources
 	case library
-    case files
 	case history
 	case settings
 	case certificates
