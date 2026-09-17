@@ -63,8 +63,12 @@ final class ArchiveHandler: NSObject {
                         password: nil,
                         compression: compression,
                         progress: { progress in
-                            Task { @MainActor in
-                                self.viewModel.packageProgress = progress
+                            let currentTime = CFAbsoluteTimeGetCurrent()
+                            if progress == 1.0 || (currentTime - self._lastProgressTime > 0.05) {
+                                self._lastProgressTime = currentTime
+                                Task { @MainActor in
+                                    self.viewModel.packageProgress = progress
+                                }
                             }
                         })
                     try FileManager.default.moveItem(at: zipUrl, to: ipaUrl)
