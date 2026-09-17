@@ -22,6 +22,8 @@ struct SigningView: View {
 	@State private var _isSigning = false
 	@State private var _selectedPhoto: PhotosPickerItem? = nil
 	@State var appIcon: UIImage?
+	@State private var _signError: Error?
+	@State private var _signFinished = false
 	
 	// MARK: Fetch
 	@FetchRequest(
@@ -131,6 +133,26 @@ struct SigningView: View {
 					_temporaryOptions = OptionsManager.shared.options
 					appIcon = nil
 				}
+			}
+			.fullScreenCover(isPresented: $_isSigning) {
+				SigningLogView(app: app, options: _temporaryOptions, error: _signError) {
+					// On Dismiss callback
+					_isSigning = false
+					if _signError == nil && _signFinished {
+						let successFeedback = UINotificationFeedbackGenerator()
+						successFeedback.notificationOccurred(.success)
+						if _temporaryOptions.post_deleteAppAfterSigned, !app.isSigned {
+							Storage.shared.deleteApp(for: app)
+						}
+						if _temporaryOptions.post_installAppAfterSigned {
+							DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+								NotificationCenter.default.post(name: Notification.Name("CSign.installApp"), object: nil)
+							}
+						}
+						dismiss()
+					}
+				}
+				.interactiveDismissDisabled(true)
 			}
 			.sheet(isPresented: $_isAltPickerPresenting) { SigningAlternativeIconView(app: app, appIcon: $appIcon, isModifing: .constant(true)) }
 			.sheet(isPresented: $_isFilePickerPresenting) {
@@ -331,7 +353,10 @@ extension SigningView {
 
 		let generator = UIImpactFeedbackGenerator(style: .medium)
 		generator.impactOccurred()
+		_signError = nil
+		_signFinished = false
 		_isSigning = true
+		LogCapture.shared.start()
 		
 		FR.signPackageFile(
 			app,
@@ -339,34 +364,9 @@ extension SigningView {
 			icon: appIcon,
 			certificate: _selectedCert()
 		) { error in
-			if let error {
-				let ok = UIAlertAction(title: .localized("Dismiss"), style: .cancel) { _ in
-					dismiss()
-				}
-				
-				UIAlertController.showAlert(
-					title: "Error",
-					message: error.localizedDescription,
-					actions: [ok]
-				)
-			} else {
-                let successFeedback = UINotificationFeedbackGenerator()
-                successFeedback.notificationOccurred(.success)
-
-				if
-					_temporaryOptions.post_deleteAppAfterSigned,
-					!app.isSigned
-				{
-					Storage.shared.deleteApp(for: app)
-				}
-				
-				if _temporaryOptions.post_installAppAfterSigned {
-					DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-						NotificationCenter.default.post(name: Notification.Name("CSign.installApp"), object: nil)
-					}
-				}
-				dismiss()
-			}
+			LogCapture.shared.stop()
+			_signError = error
+			_signFinished = true
 		}
 	}
 }
