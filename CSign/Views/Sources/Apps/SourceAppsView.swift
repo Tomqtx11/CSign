@@ -66,42 +66,6 @@ struct SourceAppsView: View {
 	@ObservedObject var viewModel: SourcesViewModel
 	@State private var _sourceContexts: [SourceRepositoryContext]?
 	
-	@ViewBuilder
-	private var _categoryScrollView: some View {
-		let cats = _availableCategories
-		if !cats.isEmpty {
-			ScrollView(.horizontal, showsIndicators: false) {
-				HStack(spacing: 10) {
-					Button(action: {
-						withAnimation { _selectedCategory = nil }
-					}) {
-						Text(.localized("All"))
-							.padding(.horizontal, 16)
-							.padding(.vertical, 8)
-							.background(_selectedCategory == nil ? Color.accentColor : Color(.secondarySystemFill))
-							.foregroundColor(_selectedCategory == nil ? .white : .primary)
-							.cornerRadius(20)
-					}
-					
-					ForEach(cats, id: \.self) { cat in
-						Button(action: {
-							withAnimation { _selectedCategory = cat }
-						}) {
-							Text(cat)
-								.padding(.horizontal, 16)
-								.padding(.vertical, 8)
-								.background(_selectedCategory == cat ? Color.accentColor : Color(.secondarySystemFill))
-								.foregroundColor(_selectedCategory == cat ? .white : .primary)
-								.cornerRadius(20)
-						}
-					}
-				}
-				.padding(.horizontal)
-				.padding(.vertical, 8)
-			}
-			.background(Color(.systemBackground))
-		}
-	}
 
 	// MARK: Body
 	var body: some View {
@@ -118,9 +82,6 @@ struct SourceAppsView: View {
 					sortAscending: $_sortAscending,
 					onSelect: {self._selectedRoute = $0}
 				)
-				.safeAreaInset(edge: .top) {
-					_categoryScrollView
-				}
 			} else {
 				ProgressView()
 			}
@@ -206,9 +167,45 @@ struct SourceAppsView: View {
 extension SourceAppsView {
 	@ViewBuilder
 	private func _sortActions() -> some View {
-		Section(.localized("Filter by")) {
-			ForEach(SortOption.allCases, id: \.displayName) { opt in
-				_sortButton(for: opt)
+		Group {
+			Section(.localized("Sort by")) {
+				ForEach(SortOption.allCases, id: \.displayName) { opt in
+					_sortButton(for: opt)
+				}
+			}
+			
+			Section(.localized("Category")) {
+				Button {
+					_selectedCategory = nil
+				} label: {
+					HStack {
+						Text(.localized("All"))
+						Spacer()
+						if _selectedCategory == nil {
+							Image(systemName: "checkmark")
+						}
+					}
+				}
+				
+				let cats = _availableCategories.sorted {
+					if $0 == "Games" { return true }
+					if $1 == "Games" { return false }
+					return $0 < $1
+				}
+				
+				ForEach(cats, id: \.self) { cat in
+					Button {
+						_selectedCategory = cat
+					} label: {
+						HStack {
+							Text(cat)
+							Spacer()
+							if _selectedCategory == cat {
+								Image(systemName: "checkmark")
+							}
+						}
+					}
+				}
 			}
 		}
 	}

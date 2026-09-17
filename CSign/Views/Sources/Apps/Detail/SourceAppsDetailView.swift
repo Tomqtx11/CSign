@@ -74,7 +74,8 @@ struct SourceAppsDetailView: View {
 					URL(string: "https://via.placeholder.com/400x800.png?text=Demo+Screenshot+2")!,
 					URL(string: "https://via.placeholder.com/400x800.png?text=Demo+Screenshot+3")!
 				]
-				let activeScreenshots = (fetchedScreenshotURLs ?? app.screenshotURLs) ?? demoScreenshots
+				let active = fetchedScreenshotURLs ?? app.screenshotURLs
+				let activeScreenshots = (active == nil || active!.isEmpty) ? demoScreenshots : active!
 				
 				if !activeScreenshots.isEmpty {
 					NBSection(.localized("Screenshots")) {
