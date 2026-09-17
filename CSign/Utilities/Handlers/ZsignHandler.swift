@@ -68,7 +68,7 @@ final class ZsignHandler {
                     }
                 )
                 if !success {
-                    continuation.resume(throwing: localErr ?? SigningFileHandlerError.zsignFailed)
+                    continuation.resume(throwing: localErr ?? SigningFileHandlerError.signFailed)
                 } else {
                     continuation.resume(returning: ())
                 }
@@ -93,7 +93,7 @@ final class ZsignHandler {
                     }
                 )
                 if !success {
-                    continuation.resume(throwing: localErr ?? SigningFileHandlerError.zsignFailed)
+                    continuation.resume(throwing: localErr ?? SigningFileHandlerError.signFailed)
                 } else {
                     continuation.resume(returning: ())
                 }
