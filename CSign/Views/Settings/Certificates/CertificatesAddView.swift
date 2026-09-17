@@ -17,6 +17,7 @@ struct CertificatesAddView: View {
 	@State private var _provisionURL: URL? = nil
 	@State private var _p12Password: String = ""
 	@State private var _certificateName: String = ""
+	@State private var _zipFileName: String = ""
 	
 	@State private var _isImportingP12Presenting = false
 	@State private var _isImportingMobileProvisionPresenting = false
@@ -30,16 +31,21 @@ struct CertificatesAddView: View {
 	var body: some View {
 		NBNavigationView(.localized("New Certificate"), displayMode: .inline) {
 			Form {
-				NBSection(.localized("Files")) {
-					_importButton("Nhập từ file ZIP", file: (_p12URL != nil && _provisionURL != nil) ? _p12URL : nil) {
-						_isImportingZipPresenting = true
-					}
-					_importButton(.localized("Import Certificate File"), file: _p12URL) {
-						_isImportingP12Presenting = true
-					}
-					_importButton(.localized("Import Provisioning File"), file: _provisionURL) {
-						_isImportingMobileProvisionPresenting = true
-					}
+				NBSection("Tệp Chứng Chỉ") {
+					Button(action: {
+                        _isImportingZipPresenting = true
+                    }) {
+                        HStack {
+                            Text("Nhập từ file .zip")
+                            Spacer()
+                            if !_zipFileName.isEmpty {
+                                Text(_zipFileName)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            }
+                        }
+                    }
 				}
 				NBSection(.localized("Password")) {
 					SecureField(.localized("Enter Password"), text: $_p12Password)
@@ -63,27 +69,7 @@ struct CertificatesAddView: View {
 					_saveCertificate()
 				}
 			}
-			.sheet(isPresented: $_isImportingP12Presenting) {
-				FileImporterRepresentableView(
-					allowedContentTypes: [.p12],
-					onDocumentsPicked: { urls in
-						guard let selectedFileURL = urls.first else { return }
-						self._p12URL = selectedFileURL
-					}
-				)
-				.ignoresSafeArea()
-			}
-			.sheet(isPresented: $_isImportingMobileProvisionPresenting) {
-				FileImporterRepresentableView(
-					allowedContentTypes: [.mobileProvision],
-					onDocumentsPicked: { urls in
-						guard let selectedFileURL = urls.first else { return }
-						self._provisionURL = selectedFileURL
-					}
-				)
-				.ignoresSafeArea()
-			}
-			.sheet(isPresented: $_isImportingZipPresenting) {
+									.sheet(isPresented: $_isImportingZipPresenting) {
 				FileImporterRepresentableView(
 					allowedContentTypes: [.zip],
 					onDocumentsPicked: { urls in
@@ -93,10 +79,11 @@ struct CertificatesAddView: View {
 								DispatchQueue.main.async {
 									self._p12URL = p12
 									self._provisionURL = prov
+                                    self._zipFileName = selectedFileURL.lastPathComponent
 								}
 							} else {
 								DispatchQueue.main.async {
-									UIAlertController.showAlertWithOk(title: "Error", message: "Could not find .p12 and .mobileprovision files in the ZIP.")
+									UIAlertController.showAlertWithOk(title: "Lỗi", message: "Không tìm thấy file .p12 và .mobileprovision trong file ZIP.")
 								}
 							}
 						}
@@ -109,22 +96,6 @@ struct CertificatesAddView: View {
 }
 
 // MARK: - Extension: View
-extension CertificatesAddView {
-	@ViewBuilder
-	private func _importButton(
-		_ title: String,
-		file: URL?,
-		action: @escaping () -> Void
-	) -> some View {
-		Button(title) {
-			action()
-		}
-		.foregroundColor(file == nil ? .accentColor : .disabled())
-		.disabled(file != nil)
-		.animation(.easeInOut(duration: 0.3), value: file != nil)
-	}
-}
-
 // MARK: - Extension: View (import)
 extension CertificatesAddView {
 	private func _saveCertificate() {

@@ -21,8 +21,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 	var title: String {
 		switch self {
 		case .sources:     	return "IPA Mod"
-		case .library: 		return .localized("Ứng dụng") // Renamed from Library to Apps
-        case .files:        return .localized("Tệp tin")
+		case .library: 		return .localized("Thư viện")
 		case .history:      return .localized("Lịch sử")
 		case .settings: 	return .localized("Settings")
 		case .certificates:	return .localized("Certificates")
@@ -34,7 +33,6 @@ enum TabEnum: String, CaseIterable, Hashable {
 		switch self {
 		case .sources: 		return "globe.desk"
 		case .library: 		return "square.grid.2x2"
-        case .files:        return "folder"
 		case .history:      return "clock.arrow.circlepath"
 		case .settings: 	return "gearshape.2"
 		case .certificates: return "person.text.rectangle"
@@ -47,7 +45,6 @@ enum TabEnum: String, CaseIterable, Hashable {
 		switch tab {
 		case .sources: SourcesView()
 		case .library: LibraryView()
-        case .files: NBNavigationView(.localized("Tệp tin")) { FileManagerView() }
 		case .history: HistoryView()
 		case .settings: SettingsView()
 		case .certificates: NBNavigationView(.localized("Certificates")) { CertificatesView() }
@@ -57,7 +54,6 @@ enum TabEnum: String, CaseIterable, Hashable {
 	
 	static var defaultTabs: [TabEnum] {
 		return [
-            .files,
 			.library,
 			.sources,
 			.history,
@@ -146,20 +142,22 @@ struct HistoryView: View {
     
     
     var body: some View {
-        NBNavigationView(selectedTab == 0 ? .localized("Lịch sử Ký") : .localized("Lịch sử Download")) {
-            VStack(spacing: 0) {
+        NBNavigationView(.localized("Lịch sử")) {
+            NBListAdaptable {
                 Picker("", selection: $selectedTab) {
                     Text("Đã Ký").tag(0)
                     Text("Tải Xuống").tag(1)
                 }
                 .pickerStyle(.segmented)
-                .padding()
+                .padding(.vertical, 8)
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
                 
-                TabView(selection: $selectedTab) {
-                    signedHistoryView.tag(0)
-                    downloadHistoryView.tag(1)
+                if selectedTab == 0 {
+                    signedHistoryContent
+                } else {
+                    downloadHistoryContent
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
             }
             .toolbar {
                 if selectedTab == 0 {
@@ -198,9 +196,19 @@ struct HistoryView: View {
         }
     }
     
-    var signedHistoryView: some View {
-        NBListAdaptable {
-            if !_filteredSignedApps.isEmpty {
+    var signedHistoryContent: some View {
+        Group {
+            if _filteredSignedApps.isEmpty {
+                if #available(iOS 17, *) {
+                    ContentUnavailableView {
+                        Label(.localized("Chưa có lịch sử ký nào."), systemImage: "clock.badge.exclamationmark")
+                    } description: {
+                        Text(.localized("Khi bạn ký một ứng dụng, nó sẽ xuất hiện ở đây cùng với toàn bộ cấu hình đã chọn."))
+                    }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                }
+            } else {
                 NBSection(
                     .localized("Signed"),
                     secondary: _filteredSignedApps.count.description
@@ -220,21 +228,10 @@ struct HistoryView: View {
         }
         .searchable(text: $_searchText, placement: .platform())
         .scrollDismissesKeyboard(.interactively)
-        .overlay {
-            if _filteredSignedApps.isEmpty {
-                if #available(iOS 17, *) {
-                    ContentUnavailableView {
-                        Label(.localized("Chưa có lịch sử ký nào."), systemImage: "clock.badge.exclamationmark")
-                    } description: {
-                        Text(.localized("Khi bạn ký một ứng dụng, nó sẽ xuất hiện ở đây cùng với toàn bộ cấu hình đã chọn."))
-                    }
-                }
-            }
-        }
     }
     
-    var downloadHistoryView: some View {
-        NBListAdaptable {
+    var downloadHistoryContent: some View {
+        Group {
             if downloadManager.downloads.isEmpty {
                 if #available(iOS 17, *) {
                     ContentUnavailableView {
@@ -242,6 +239,8 @@ struct HistoryView: View {
                     } description: {
                         Text("Các ứng dụng đang tải xuống sẽ hiển thị ở đây.")
                     }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 }
             } else {
                 NBSection("Đang Tải Xuống") {
