@@ -32,7 +32,7 @@ struct SigningLogView: View {
 			// App Info
 			VStack(alignment: .leading, spacing: 8) {
 				Text("📦 Tên App: \(options.appName ?? app.name ?? "Không rõ")")
-				Text("🆔 Bundle ID: \(options.appIdentifier ?? app.bundleIdentifier ?? "Không rõ")")
+				Text("🆔 Bundle ID: \(options.appIdentifier ?? app.identifier ?? "Không rõ")")
 				Text("🏷 Phiên bản: \(options.appVersion ?? app.version ?? "Không rõ")")
 				
 				if !options.disInjectionFiles.isEmpty {
