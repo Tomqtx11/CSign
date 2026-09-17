@@ -45,14 +45,14 @@ final class ArchiveHandler: NSObject {
 		_payloadUrl = payloadUrl
 	}
 	
-	func archive() async throws -> URL {
+	func archive(forceNoCompression: Bool = false) async throws -> URL {
         let payloadUrl = self._payloadUrl
         guard let pUrl = payloadUrl else {
             throw SigningFileHandlerError.appNotFound
         }
         let zipUrl = self._uniqueWorkDir.appendingPathComponent("Archive.zip")
         let ipaUrl = self._uniqueWorkDir.appendingPathComponent("Archive.ipa")
-        let compression = ZipCompression.allCases[ArchiveHandler.getCompressionLevel()]
+        let compression = forceNoCompression ? ZipCompression.NoCompression : ZipCompression.allCases[ArchiveHandler.getCompressionLevel()]
         
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
