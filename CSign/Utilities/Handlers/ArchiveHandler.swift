@@ -12,6 +12,7 @@ import SwiftUI
 import IDeviceSwift
 
 final class ArchiveHandler: NSObject {
+	private var _lastProgressTime: CFAbsoluteTime = 0
 	@ObservedObject var viewModel: InstallerStatusViewModel
 	
 	private let _fileManager = FileManager.default

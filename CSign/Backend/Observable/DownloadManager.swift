@@ -243,23 +243,29 @@ extension DownloadManager: URLSessionDownloadDelegate {
 		}
 	}
 	
+	private var _lastDlProgressTime: [String: CFAbsoluteTime] = [:]
+	
 	func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
 		guard let download = getDownloadTask(by: downloadTask) else { return }
 		
-		DispatchQueue.main.async {
-			download.progress = totalBytesExpectedToWrite > 0
-			? Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
-			: 0
-			download.bytesDownloaded = totalBytesWritten
-			download.totalBytes = totalBytesExpectedToWrite
-			
-			self.updateDownloadNotification(dl: download)
-			
-			#if !targetEnvironment(macCatalyst)
-			if #available(iOS 26.0, *) {
-				BackgroundTaskManager.shared.updateProgress(for: download.id, progress: download.overallProgress)
+		let currentTime = CFAbsoluteTimeGetCurrent()
+		let lastTime = _lastDlProgressTime[download.id] ?? 0
+		let progress = totalBytesExpectedToWrite > 0 ? Double(totalBytesWritten) / Double(totalBytesExpectedToWrite) : 0
+		
+		if progress >= 1.0 || (currentTime - lastTime > 0.1) {
+			_lastDlProgressTime[download.id] = currentTime
+			DispatchQueue.main.async {
+				download.progress = progress
+				download.bytesDownloaded = totalBytesWritten
+				download.totalBytes = totalBytesExpectedToWrite
+				self.updateDownloadNotification(dl: download)
+				
+				#if !targetEnvironment(macCatalyst)
+				if #available(iOS 26.0, *) {
+					BackgroundTaskManager.shared.updateProgress(for: download.id, progress: download.overallProgress)
+				}
+				#endif
 			}
-			#endif
 		}
 	}
 	

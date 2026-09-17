@@ -70,9 +70,8 @@ struct SourceAppsDetailView: View {
 				Divider()
                 
 				let demoScreenshots = [
-					URL(string: "https://via.placeholder.com/400x800.png?text=Demo+Screenshot+1")!,
-					URL(string: "https://via.placeholder.com/400x800.png?text=Demo+Screenshot+2")!,
-					URL(string: "https://via.placeholder.com/400x800.png?text=Demo+Screenshot+3")!
+					URL(string: "https://i.imgur.com/t1j4hxL.jpeg")!,
+					URL(string: "https://i.imgur.com/PXqE6oY.jpeg")!
 				]
 				let active = fetchedScreenshotURLs ?? app.screenshotURLs
 				let activeScreenshots = (active == nil || active!.isEmpty) ? demoScreenshots : active!

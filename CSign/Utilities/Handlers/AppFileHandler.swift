@@ -67,14 +67,18 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 						password: nil,
 						progress: { progress in
 							if let download = download {
-								DispatchQueue.main.async {
-									download.unpackageProgress = progress
-									
-									#if !targetEnvironment(macCatalyst)
-									if #available(iOS 26.0, *) {
-										BackgroundTaskManager.shared.updateProgress(for: download.id, progress: download.overallProgress)
+								let currentTime = CFAbsoluteTimeGetCurrent()
+								if progress == 1.0 || (currentTime - self._lastProgressTime > 0.05) {
+									self._lastProgressTime = currentTime
+									DispatchQueue.main.async {
+										download.unpackageProgress = progress
+										
+										#if !targetEnvironment(macCatalyst)
+										if #available(iOS 26.0, *) {
+											BackgroundTaskManager.shared.updateProgress(for: download.id, progress: download.overallProgress)
+										}
+										#endif
 									}
-									#endif
 								}
 							}
 						}
