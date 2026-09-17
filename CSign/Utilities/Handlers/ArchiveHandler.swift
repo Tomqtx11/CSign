@@ -45,28 +45,34 @@ final class ArchiveHandler: NSObject {
 	}
 	
 	func archive() async throws -> URL {
-		return try await Task.detached(priority: .background) { [self] in
-			guard let payloadUrl = await self._payloadUrl else {
-				throw SigningFileHandlerError.appNotFound
-			}
-			
-			let zipUrl = self._uniqueWorkDir.appendingPathComponent("Archive.zip")
-			let ipaUrl = self._uniqueWorkDir.appendingPathComponent("Archive.ipa")
-			
-			try await Zip.zipFiles(
-				paths: [payloadUrl],
-				zipFilePath: zipUrl,
-				password: nil,
-				compression: ZipCompression.allCases[ArchiveHandler.getCompressionLevel()],
-				progress: { progress in
-					Task { @MainActor in
-						self.viewModel.packageProgress = progress
-					}
-				})
-			
-			try FileManager.default.moveItem(at: zipUrl, to: ipaUrl)
-			return ipaUrl
-		}.value
+        let payloadUrl = self._payloadUrl
+        guard let pUrl = payloadUrl else {
+            throw SigningFileHandlerError.appNotFound
+        }
+        let zipUrl = self._uniqueWorkDir.appendingPathComponent("Archive.zip")
+        let ipaUrl = self._uniqueWorkDir.appendingPathComponent("Archive.ipa")
+        let compression = ZipCompression.allCases[ArchiveHandler.getCompressionLevel()]
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    try Zip.zipFiles(
+                        paths: [pUrl],
+                        zipFilePath: zipUrl,
+                        password: nil,
+                        compression: compression,
+                        progress: { progress in
+                            Task { @MainActor in
+                                self.viewModel.packageProgress = progress
+                            }
+                        })
+                    try FileManager.default.moveItem(at: zipUrl, to: ipaUrl)
+                    continuation.resume(returning: ipaUrl)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
 	}
 	
 	func moveToArchive(_ package: URL, shouldOpen: Bool = false) async throws -> URL? {

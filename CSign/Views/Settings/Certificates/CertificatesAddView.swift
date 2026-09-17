@@ -36,14 +36,16 @@ struct CertificatesAddView: View {
                         _isImportingZipPresenting = true
                     }) {
                         HStack {
-                            Text("Nhập từ file .zip")
-                            Spacer()
-                            if !_zipFileName.isEmpty {
+                            if _zipFileName.isEmpty {
+                                Text("Nhập từ file .zip")
+                            } else {
+                                Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
                                 Text(_zipFileName)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.primary)
                                     .lineLimit(1)
                                     .truncationMode(.middle)
                             }
+                            Spacer()
                         }
                     }
 				}

@@ -33,17 +33,13 @@ struct SettingsView: View {
 	}
 
     
-	private let _donationsUrl = "https://cuios.shop"
 	
     
 	// MARK: Body
 	var body: some View {
 		NBNavigationView(.localized("Settings")) {
 			Form {
-				#if !NIGHTLY && !DEBUG
-					SettingsDonationCellView(site: _donationsUrl)
-				#endif
-                
+				                
 
                 
 				Section {

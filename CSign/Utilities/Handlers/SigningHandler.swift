@@ -42,13 +42,22 @@ final class SigningHandler: NSObject {
 			throw SigningFileHandlerError.appNotFound
 		}
 
-		try _fileManager.createDirectoryIfNeeded(at: _uniqueWorkDir)
-		
-		let movedAppURL = _uniqueWorkDir.appendingPathComponent(appUrl.lastPathComponent)
-		
-		try _fileManager.copyItem(at: appUrl, to: movedAppURL)
-		_movedAppPath = movedAppURL
-		Logger.misc.info("[\(self._uuid)] Moved Payload to: \(movedAppURL.path)")
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    try self._fileManager.createDirectoryIfNeeded(at: self._uniqueWorkDir)
+                    
+                    let movedAppURL = self._uniqueWorkDir.appendingPathComponent(appUrl.lastPathComponent)
+                    
+                    try self._fileManager.copyItem(at: appUrl, to: movedAppURL)
+                    self._movedAppPath = movedAppURL
+                    Logger.misc.info("[\(self._uuid)] Moved Payload to: \(movedAppURL.path)")
+                    continuation.resume(returning: ())
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
 	}
 	
 	func modify() async throws {
@@ -134,14 +143,23 @@ final class SigningHandler: NSObject {
 		
 		var destinationURL = try await _directory()
 		
-		try _fileManager.createDirectoryIfNeeded(at: destinationURL)
-		
-		destinationURL = destinationURL.appendingPathComponent(movedAppPath.lastPathComponent)
-		
-		try _fileManager.moveItem(at: movedAppPath, to: destinationURL)
-		Logger.misc.info("[\(self._uuid)] Moved App to: \(destinationURL.path)")
-		
-		try? _fileManager.removeItem(at: _uniqueWorkDir)
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    try self._fileManager.createDirectoryIfNeeded(at: destinationURL)
+                    
+                    let finalURL = destinationURL.appendingPathComponent(movedAppPath.lastPathComponent)
+                    
+                    try self._fileManager.moveItem(at: movedAppPath, to: finalURL)
+                    Logger.misc.info("[\(self._uuid)] Moved App to: \(finalURL.path)")
+                    
+                    try? self._fileManager.removeItem(at: self._uniqueWorkDir)
+                    continuation.resume(returning: ())
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
 	}
 	
 	func addToDatabase() async throws {

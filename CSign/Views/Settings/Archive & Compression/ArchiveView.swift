@@ -11,7 +11,7 @@ import NimbleViews
 
 // MARK: - View
 struct ArchiveView: View {
-	@AppStorage("CSign.compressionLevel") private var _compressionLevel: Int = ZipCompression.DefaultCompression.rawValue
+	@AppStorage("CSign.compressionLevel") private var _compressionLevel: Int = ZipCompression.NoCompression.rawValue
 	@AppStorage("CSign.useShareSheetForArchiving") private var _useShareSheet: Bool = false
 	
 	// MARK: Body
@@ -20,7 +20,7 @@ struct ArchiveView: View {
 			Section {
 				Picker(.localized("Compression Level"), systemImage: "archivebox", selection: $_compressionLevel) {
 					ForEach(ZipCompression.allCases, id: \.rawValue) { level in
-						Text(level.label).tag(level)
+						Text(level.label).tag(level.rawValue)
 					}
 				}
 			}

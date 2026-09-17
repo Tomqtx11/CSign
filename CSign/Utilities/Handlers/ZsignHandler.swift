@@ -34,9 +34,15 @@ final class ZsignHandler {
 		let bundle = Bundle(url: _appUrl)
 		let execPath = _appUrl.appendingPathComponent(bundle?.exec ?? "").relativePath
 		
-		if !Zsign.removeDylibs(appExecutable: execPath, using: _options.disInjectionFiles) {
-			throw SigningFileHandlerError.disinjectFailed
-		}
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                if !Zsign.removeDylibs(appExecutable: execPath, using: self._options.disInjectionFiles) {
+                    continuation.resume(throwing: SigningFileHandlerError.disinjectFailed)
+                } else {
+                    continuation.resume(returning: ())
+                }
+            }
+        }
 	}
 	
 	func sign() async throws {
@@ -44,34 +50,52 @@ final class ZsignHandler {
 			throw SigningFileHandlerError.missingCertifcate
 		}
 
-		let _ = Zsign.sign(
-			appPath: _appUrl.relativePath,
-			provisionPath: Storage.shared.getFile(.provision, from: cert)?.path ?? "",
-			p12Path: Storage.shared.getFile(.certificate, from: cert)?.path ?? "",
-			p12Password: cert.password ?? "",
-			entitlementsPath: _options.appEntitlementsFile?.path ?? "",
-			customIdentifier: _options.appIdentifier ?? "",
-			customName: _options.appName ?? "",
-			customVersion: _options.appVersion ?? "",
-			removeProvision: _options.removeProvisioning,
-			completion: { _, error in
-				self.hadError = error
-			}
-		)
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let _ = Zsign.sign(
+                    appPath: self._appUrl.relativePath,
+                    provisionPath: Storage.shared.getFile(.provision, from: cert)?.path ?? "",
+                    p12Path: Storage.shared.getFile(.certificate, from: cert)?.path ?? "",
+                    p12Password: cert.password ?? "",
+                    entitlementsPath: self._options.appEntitlementsFile?.path ?? "",
+                    customIdentifier: self._options.appIdentifier ?? "",
+                    customName: self._options.appName ?? "",
+                    customVersion: self._options.appVersion ?? "",
+                    removeProvision: self._options.removeProvisioning,
+                    completion: { _, error in
+                        self.hadError = error
+                    }
+                )
+                if let err = self.hadError {
+                    continuation.resume(throwing: err)
+                } else {
+                    continuation.resume(returning: ())
+                }
+            }
+        }
 	}
 	
 	func adhocSign() async throws {
-		let _ = Zsign.sign(
-			appPath: _appUrl.relativePath,
-			entitlementsPath: _options.appEntitlementsFile?.path ?? "",
-			customIdentifier: _options.appIdentifier ?? "",
-			customName: _options.appName ?? "",
-			customVersion: _options.appVersion ?? "",
-			adhoc: true,
-			removeProvision: _options.removeProvisioning,
-			completion: { _, error in
-				self.hadError = error
-			}
-		)
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let _ = Zsign.sign(
+                    appPath: self._appUrl.relativePath,
+                    entitlementsPath: self._options.appEntitlementsFile?.path ?? "",
+                    customIdentifier: self._options.appIdentifier ?? "",
+                    customName: self._options.appName ?? "",
+                    customVersion: self._options.appVersion ?? "",
+                    adhoc: true,
+                    removeProvision: self._options.removeProvisioning,
+                    completion: { _, error in
+                        self.hadError = error
+                    }
+                )
+                if let err = self.hadError {
+                    continuation.resume(throwing: err)
+                } else {
+                    continuation.resume(returning: ())
+                }
+            }
+        }
 	}
 }
