@@ -52,7 +52,8 @@ final class ZsignHandler {
 
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                let _ = Zsign.sign(
+                var localErr: Error? = nil
+                let success = Zsign.sign(
                     appPath: self._appUrl.relativePath,
                     provisionPath: Storage.shared.getFile(.provision, from: cert)?.path ?? "",
                     p12Path: Storage.shared.getFile(.certificate, from: cert)?.path ?? "",
@@ -63,11 +64,11 @@ final class ZsignHandler {
                     customVersion: self._options.appVersion ?? "",
                     removeProvision: self._options.removeProvisioning,
                     completion: { _, error in
-                        self.hadError = error
+                        localErr = error
                     }
                 )
-                if let err = self.hadError {
-                    continuation.resume(throwing: err)
+                if !success {
+                    continuation.resume(throwing: localErr ?? SigningFileHandlerError.zsignFailed)
                 } else {
                     continuation.resume(returning: ())
                 }
@@ -78,7 +79,8 @@ final class ZsignHandler {
 	func adhocSign() async throws {
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                let _ = Zsign.sign(
+                var localErr: Error? = nil
+                let success = Zsign.sign(
                     appPath: self._appUrl.relativePath,
                     entitlementsPath: self._options.appEntitlementsFile?.path ?? "",
                     customIdentifier: self._options.appIdentifier ?? "",
@@ -87,11 +89,11 @@ final class ZsignHandler {
                     adhoc: true,
                     removeProvision: self._options.removeProvisioning,
                     completion: { _, error in
-                        self.hadError = error
+                        localErr = error
                     }
                 )
-                if let err = self.hadError {
-                    continuation.resume(throwing: err)
+                if !success {
+                    continuation.resume(throwing: localErr ?? SigningFileHandlerError.zsignFailed)
                 } else {
                     continuation.resume(returning: ())
                 }

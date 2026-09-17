@@ -44,7 +44,7 @@ class Download: Identifiable, ObservableObject, @unchecked Sendable {
 		self.url = url
 		self.onlyArchiving = onlyArchiving
 		self.sourceProvenance = sourceProvenance
-		self.fileName = url.lastPathComponent
+		self.fileName = sourceProvenance?.sourceAppName ?? url.lastPathComponent
 	}
 }
 

@@ -69,11 +69,17 @@ struct SourceAppsDetailView: View {
 				_infoPills(app: app)
 				Divider()
                 
-				if let screenshotURLs = fetchedScreenshotURLs ?? app.screenshotURLs {
+				let demoScreenshots = [
+					URL(string: "https://via.placeholder.com/400x800.png?text=Demo+Screenshot+1")!,
+					URL(string: "https://via.placeholder.com/400x800.png?text=Demo+Screenshot+2")!,
+					URL(string: "https://via.placeholder.com/400x800.png?text=Demo+Screenshot+3")!
+				]
+				let activeScreenshots = (fetchedScreenshotURLs ?? app.screenshotURLs) ?? demoScreenshots
+				
+				if !activeScreenshots.isEmpty {
 					NBSection(.localized("Screenshots")) {
-						_screenshots(screenshotURLs: screenshotURLs)
+						_screenshots(screenshotURLs: activeScreenshots)
 					}
-                    
 					Divider()
 				}
 				
