@@ -69,12 +69,7 @@ struct SourceAppsDetailView: View {
 				_infoPills(app: app)
 				Divider()
                 
-				let demoScreenshots = [
-					Bundle.main.url(forResource: "RepoImage1", withExtension: "jpg")!,
-					Bundle.main.url(forResource: "RepoImage2", withExtension: "jpg")!
-				]
-				let active = fetchedScreenshotURLs ?? app.screenshotURLs
-				let activeScreenshots = (active == nil || active!.isEmpty) ? demoScreenshots : active!
+				let activeScreenshots = fetchedScreenshotURLs ?? app.screenshotURLs ?? []
 				
 				if !activeScreenshots.isEmpty {
 					NBSection(.localized("Screenshots")) {

@@ -57,20 +57,14 @@ struct SigningLogView: View {
 			Divider()
 			
 			// Console Logs
-			ScrollViewReader { proxy in
-				ScrollView {
-					Text(logCapture.logs)
-						.font(.system(.caption, design: .monospaced))
-						.frame(maxWidth: .infinity, alignment: .leading)
-						.padding()
-						.id("LOG_BOTTOM")
-				}
-				.background(Color.black)
-				.foregroundColor(.green)
-				.onChange(of: logCapture.logs) { _ in
-					proxy.scrollTo("LOG_BOTTOM", anchor: .bottom)
-				}
+			ScrollView {
+				Text(logCapture.logs)
+					.font(.system(.caption, design: .monospaced))
+					.frame(maxWidth: .infinity, alignment: .leading)
+					.padding()
 			}
+			.background(Color.black)
+			.foregroundColor(.green)
 		}
 		.onChange(of: logCapture.isCapturing) { isCapturing in
 			if !isCapturing && error == nil {

@@ -47,8 +47,9 @@ final class SigningHandler: NSObject {
                 do {
                     try self._fileManager.createDirectoryIfNeeded(at: self._uniqueWorkDir)
                     
+                    LogCapture.shared.printLog("Tạo thư mục bộ nhớ đệm...")
                     let movedAppURL = self._uniqueWorkDir.appendingPathComponent(appUrl.lastPathComponent)
-                    
+                    LogCapture.shared.printLog("Sao chép tệp .app...")
                     try self._fileManager.copyItem(at: appUrl, to: movedAppURL)
                     self._movedAppPath = movedAppURL
                     Logger.misc.info("[\(self._uuid)] Moved Payload to: \(movedAppURL.path)")
@@ -61,6 +62,7 @@ final class SigningHandler: NSObject {
 	}
 	
 	func modify() async throws {
+		LogCapture.shared.printLog("Chuẩn bị tuỳ chỉnh ứng dụng...")
 		guard let movedAppPath = _movedAppPath else {
 			throw SigningFileHandlerError.appNotFound
 		}
@@ -113,6 +115,9 @@ final class SigningHandler: NSObject {
 		try await _locateMachosAndFixupArm64eSlice(for: movedAppPath)
 		
 		let handler = ZsignHandler(appUrl: movedAppPath, options: _options, cert: appCertificate)
+		if !_options.disInjectionFiles.isEmpty {
+			LogCapture.shared.printLog("Đang gỡ bỏ (Disinject) thư viện...")
+		}
 		try await handler.disinject()
 		
 		if
@@ -128,6 +133,7 @@ final class SigningHandler: NSObject {
 			throw SigningFileHandlerError.missingCertifcate
 		}
 		
+		LogCapture.shared.printLog("Hoàn tất và lưu vào cơ sở dữ liệu...")
 		try await self.move()
 		try await self.addToDatabase()
 		

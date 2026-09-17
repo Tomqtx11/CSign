@@ -149,7 +149,7 @@ struct InstallPreviewView: View {
 				let handler = await ArchiveHandler(app: app, viewModel: viewModel)
 				try await handler.move()
 				
-				let packageUrl = try await handler.archive()
+				let packageUrl = try await handler.archive(forceNoCompression: !isSharing)
 				
 				if await !isSharing {
 					if await _installationMethod == 0 {
