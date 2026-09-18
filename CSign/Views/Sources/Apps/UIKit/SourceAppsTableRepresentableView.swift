@@ -28,19 +28,46 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 		
 		if
 			let firstSource = sourceContexts.first,
-			sourceContexts.count == 1,
-			let news = firstSource.repository.news,
-			!news.isEmpty
+			sourceContexts.count == 1
 		{
-			let header = UIHostingController(rootView: SourceNewsView(news: news))
-			header.view.translatesAutoresizingMaskIntoConstraints = true
-			header.view.backgroundColor = .clear
-			let fixedHeight: CGFloat = 161
-			let width = tableView.bounds.width
-			header.view.frame = CGRect(origin: .zero, size: CGSize(width: width, height: fixedHeight))
+			var news = firstSource.repository.news ?? []
+			
+			// Hardcode injection of banners for the specific repo
+			if firstSource.repository.identifier == "kh.crysalis.csign-repo" {
+				let banner1 = ASRepository.News(
+					id: "csign-buy-cert-hardcoded",
+					title: "🛒 Mua Chứng Chỉ Apple Giá Rẻ",
+					caption: "Mua chứng chỉ Apple Developer tự động, giá rẻ nhất tại Cuios.shop. Hỗ trợ CSign, eSign, GBox, Scarlet và nhiều ứng dụng khác. Thanh toán nhanh, nhận cert ngay!",
+					tintColor: Color(hex: "00D4FF"),
+					imageURL: URL(string: "https://raw.githubusercontent.com/Tomqtx11/CSign/main/CSign/Resources/RepoImage1.jpg"),
+					url: URL(string: "https://cuios.shop")
+				)
+				
+				let banner2 = ASRepository.News(
+					id: "csign-community-hardcoded",
+					title: "👥 Tham Gia Cộng Đồng",
+					caption: "Tham gia group Telegram cộng đồng Chứng Chỉ CuiOS để được hỗ trợ, chia sẻ kinh nghiệm, nhận thông tin mới nhất về chứng chỉ và ứng dụng iOS!",
+					tintColor: Color(hex: "8A28F7"),
+					imageURL: URL(string: "https://raw.githubusercontent.com/Tomqtx11/CSign/main/CSign/Resources/RepoImage2.jpg"),
+					url: URL(string: "https://t.me/chungchicuios")
+				)
+				
+				// Add them to the end because SourceNewsView uses news.reversed() for display
+				news.append(banner2)
+				news.append(banner1)
+			}
+			
+			if !news.isEmpty {
+				let header = UIHostingController(rootView: SourceNewsView(news: news))
+				header.view.translatesAutoresizingMaskIntoConstraints = true
+				header.view.backgroundColor = .clear
+				let fixedHeight: CGFloat = 161
+				let width = tableView.bounds.width
+				header.view.frame = CGRect(origin: .zero, size: CGSize(width: width, height: fixedHeight))
 
-			DispatchQueue.main.async {
-				tableView.tableHeaderView = header.view
+				DispatchQueue.main.async {
+					tableView.tableHeaderView = header.view
+				}
 			}
 		}
 		

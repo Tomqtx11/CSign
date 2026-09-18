@@ -459,6 +459,18 @@ extension ASRepository {
 		public var date: DateParsed?
 		public var notify: Bool
 
+		public init(id: String, title: String, caption: String, tintColor: Color? = nil, imageURL: URL? = nil, url: URL? = nil, appID: App.ID? = nil, date: DateParsed? = nil, notify: Bool = false) {
+			self.id = id
+			self.title = title
+			self.caption = caption
+			self.tintColor = tintColor
+			self.imageURL = imageURL
+			self.url = url
+			self.appID = appID
+			self.date = date
+			self.notify = notify
+		}
+
 		public init(from decoder: any Decoder) throws {
 			let container = try decoder.container(keyedBy: CodingKeys.self)
 			self.id = try container.decode(String.self, forKey: .id)
