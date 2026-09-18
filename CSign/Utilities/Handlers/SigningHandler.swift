@@ -39,7 +39,7 @@ final class SigningHandler: NSObject {
 	
 	/// Check if signing has been cancelled
 	private func checkCancelled() throws {
-		if LogCapture.shared.isCancelled {
+		if LogCapture.isCancelledSync {
 			throw SigningFileHandlerError.cancelled
 		}
 	}
@@ -103,7 +103,7 @@ final class SigningHandler: NSObject {
 			options: [.skipsHiddenFiles])
 		
 		while let fileURL = enumerator?.nextObject() as? URL {
-			if LogCapture.shared.isCancelled {
+			if LogCapture.isCancelledSync {
 				throw SigningFileHandlerError.cancelled
 			}
 			

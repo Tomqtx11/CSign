@@ -11,6 +11,23 @@ final class LogCapture: ObservableObject {
 	@Published var currentPhase: SigningPhase = .idle
 	@Published var isCancelled = false
 	
+	/// Thread-safe cancelled flag accessible from any thread
+	private static let _cancelledLock = NSLock()
+	private static var _cancelledFlag = false
+	
+	/// Nonisolated thread-safe check for cancellation
+	nonisolated static var isCancelledSync: Bool {
+		_cancelledLock.lock()
+		defer { _cancelledLock.unlock() }
+		return _cancelledFlag
+	}
+	
+	private static func setCancelledSync(_ value: Bool) {
+		_cancelledLock.lock()
+		_cancelledFlag = value
+		_cancelledLock.unlock()
+	}
+	
 	/// Phases with their weight in the overall 0-100% progress
 	enum SigningPhase: String {
 		case idle = "Chờ"
@@ -51,6 +68,7 @@ final class LogCapture: ObservableObject {
 	func start() {
 		isCapturing = true
 		isCancelled = false
+		LogCapture.setCancelledSync(false)
 		logs = ""
 		progress = 0.0
 		currentPhase = .preparing
@@ -58,6 +76,7 @@ final class LogCapture: ObservableObject {
 	
 	func cancel() {
 		isCancelled = true
+		LogCapture.setCancelledSync(true)
 		printLog("⛔️ Đã huỷ quá trình ký.")
 		stop()
 	}

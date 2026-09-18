@@ -60,7 +60,7 @@ enum FR {
 				try await handler.copy()
 				
 				// Check cancel between major steps
-				if await LogCapture.shared.isCancelled {
+				if LogCapture.isCancelledSync {
 					try? await handler.clean()
 					await MainActor.run { completion(SigningFileHandlerError.cancelled) }
 					return
@@ -68,7 +68,7 @@ enum FR {
 				
 				try await handler.modify()
 				
-				if await LogCapture.shared.isCancelled {
+				if LogCapture.isCancelledSync {
 					try? await handler.clean()
 					await MainActor.run { completion(SigningFileHandlerError.cancelled) }
 					return
