@@ -35,6 +35,26 @@
   ],
   "news": [
     {
+      "title": "🛒 Mua Chứng Chỉ Apple Giá Rẻ",
+      "identifier": "csign-buy-cert",
+      "caption": "Mua chứng chỉ Apple Developer tự động, giá rẻ nhất tại Cuios.shop. Hỗ trợ CSign, eSign, GBox, Scarlet và nhiều ứng dụng khác. Thanh toán nhanh, nhận cert ngay!",
+      "tintColor": "00D4FF",
+      "imageURL": "https://raw.githubusercontent.com/Tomqtx11/CSign/main/CSign/Resources/RepoImage1.jpg",
+      "date": "2026-09-18",
+      "url": "https://cuios.shop",
+      "notify": true
+    },
+    {
+      "title": "👥 Tham Gia Cộng Đồng",
+      "identifier": "csign-community",
+      "caption": "Tham gia group Telegram cộng đồng Chứng Chỉ CuiOS để được hỗ trợ, chia sẻ kinh nghiệm, nhận thông tin mới nhất về chứng chỉ và ứng dụng iOS!",
+      "tintColor": "8A28F7",
+      "imageURL": "https://raw.githubusercontent.com/Tomqtx11/CSign/main/CSign/Resources/RepoImage2.jpg",
+      "date": "2026-09-17",
+      "url": "https://t.me/chungchicuios",
+      "notify": true
+    },
+    {
       "title": "Donate",
       "identifier": "csign-donate",
       "caption": "CSign is a free project and is not made possible without my sponsors! Feel free to donate, it helps keep me motivated in making new updates for this app, and thank you everyone.",
