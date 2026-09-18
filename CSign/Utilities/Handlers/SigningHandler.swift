@@ -37,21 +37,50 @@ final class SigningHandler: NSObject {
 		super.init()
 	}
 	
+	/// Check if signing has been cancelled
+	private func checkCancelled() throws {
+		if LogCapture.shared.isCancelled {
+			throw SigningFileHandlerError.cancelled
+		}
+	}
+	
 	func copy() async throws {
 		guard let appUrl = Storage.shared.getAppDirectory(for: _app) else {
 			throw SigningFileHandlerError.appNotFound
 		}
 
+		try checkCancelled()
+		
+		LogCapture.shared.setPhase(.copying)
+		
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
+					try self.checkCancelled()
                     try self._fileManager.createDirectoryIfNeeded(at: self._uniqueWorkDir)
                     
-                    LogCapture.shared.printLog("Tạo thư mục bộ nhớ đệm...")
+                    LogCapture.shared.printLog("📁 Tạo thư mục bộ nhớ đệm...")
+					LogCapture.shared.updateProgress(phase: .copying, subProgress: 0.05)
+					
                     let movedAppURL = self._uniqueWorkDir.appendingPathComponent(appUrl.lastPathComponent)
-                    LogCapture.shared.printLog("Sao chép tệp .app...")
-                    try self._fileManager.copyItem(at: appUrl, to: movedAppURL)
+                    
+					// Calculate total size for progress
+					let totalSize = self.calculateDirectorySize(url: appUrl)
+					LogCapture.shared.printLog("📋 Kích thước app: \(self.formatBytes(totalSize))")
+					LogCapture.shared.updateProgress(phase: .copying, subProgress: 0.1)
+					
+					LogCapture.shared.printLog("📦 Đang sao chép tệp .app...")
+					
+					// Use streaming copy with progress for large apps
+					if totalSize > 50_000_000 { // > 50MB
+						try self.copyDirectoryWithProgress(from: appUrl, to: movedAppURL, totalSize: totalSize)
+					} else {
+						try self._fileManager.copyItem(at: appUrl, to: movedAppURL)
+						LogCapture.shared.updateProgress(phase: .copying, subProgress: 1.0)
+					}
+					
                     self._movedAppPath = movedAppURL
+					LogCapture.shared.printLog("✅ Sao chép hoàn tất.")
                     Logger.misc.info("[\(self._uuid)] Moved Payload to: \(movedAppURL.path)")
                     continuation.resume(returning: ())
                 } catch {
@@ -61,8 +90,58 @@ final class SigningHandler: NSObject {
         }
 	}
 	
+	/// Copy directory with progress reporting for large apps
+	private func copyDirectoryWithProgress(from source: URL, to destination: URL, totalSize: Int64) throws {
+		try _fileManager.createDirectoryIfNeeded(at: destination)
+		
+		var copiedSize: Int64 = 0
+		var lastReportedPercent: Int = 0
+		let startTime = CFAbsoluteTimeGetCurrent()
+		
+		let enumerator = _fileManager.enumerator(at: source,
+			includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey],
+			options: [.skipsHiddenFiles])
+		
+		while let fileURL = enumerator?.nextObject() as? URL {
+			if LogCapture.shared.isCancelled {
+				throw SigningFileHandlerError.cancelled
+			}
+			
+			let relativePath = fileURL.path.replacingOccurrences(of: source.path, with: "")
+			let destURL = destination.appendingPathComponent(relativePath)
+			
+			let resourceValues = try fileURL.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey])
+			
+			if resourceValues.isDirectory == true {
+				try _fileManager.createDirectoryIfNeeded(at: destURL)
+			} else {
+				let parentDir = destURL.deletingLastPathComponent()
+				try _fileManager.createDirectoryIfNeeded(at: parentDir)
+				try _fileManager.copyItem(at: fileURL, to: destURL)
+				copiedSize += Int64(resourceValues.fileSize ?? 0)
+			}
+			
+			// Report progress every 1%
+			let currentPercent = totalSize > 0 ? Int(Double(copiedSize) / Double(totalSize) * 100) : 0
+			if currentPercent > lastReportedPercent {
+				lastReportedPercent = currentPercent
+				let progressValue = Double(copiedSize) / Double(totalSize)
+				LogCapture.shared.updateProgress(phase: .copying, subProgress: 0.1 + progressValue * 0.9)
+				
+				// Log every 10%
+				if currentPercent % 10 == 0 {
+					let elapsed = CFAbsoluteTimeGetCurrent() - startTime
+					let speed = elapsed > 0 ? Double(copiedSize) / elapsed / 1_000_000 : 0
+					LogCapture.shared.printLog("   ↳ Sao chép: \(currentPercent)% (\(self.formatBytes(copiedSize))/\(self.formatBytes(totalSize))) - \(String(format: "%.1f", speed)) MB/s")
+				}
+			}
+		}
+	}
+	
 	func modify() async throws {
-		LogCapture.shared.printLog("Chuẩn bị tuỳ chỉnh ứng dụng...")
+		try checkCancelled()
+		LogCapture.shared.setPhase(.modifying)
+		LogCapture.shared.printLog("⚙️ Chuẩn bị tuỳ chỉnh ứng dụng...")
 		guard let movedAppPath = _movedAppPath else {
 			throw SigningFileHandlerError.appNotFound
 		}
@@ -75,67 +154,109 @@ final class SigningHandler: NSObject {
 			throw SigningFileHandlerError.infoPlistNotFound
 		}
 		
+		LogCapture.shared.updateProgress(phase: .modifying, subProgress: 0.1)
+		
 		if
 			let identifier = _options.appIdentifier,
 			let oldIdentifier = infoDictionary["CFBundleIdentifier"] as? String
 		{
+			LogCapture.shared.printLog("   ↳ Cập nhật Bundle ID các plugin...")
 			try await _modifyPluginIdentifiers(old: oldIdentifier, new: identifier, for: movedAppPath)
 		}
 		
+		try checkCancelled()
+		LogCapture.shared.updateProgress(phase: .modifying, subProgress: 0.2)
+		LogCapture.shared.printLog("   ↳ Cập nhật Info.plist...")
 		try await _modifyDict(using: infoDictionary, with: _options, to: movedAppPath)
 		
 		if let icon = appIcon {
+			LogCapture.shared.printLog("   ↳ Thay đổi icon ứng dụng...")
 			try await _modifyDict(using: infoDictionary, for: icon, to: movedAppPath)
 		}
 		
 		if let name = _options.appName {
+			LogCapture.shared.printLog("   ↳ Đổi tên hiển thị...")
 			try await _modifyLocalesForName(name, for: movedAppPath)
 		}
 		
+		try checkCancelled()
+		LogCapture.shared.updateProgress(phase: .modifying, subProgress: 0.4)
+		
 		if !_options.removeFiles.isEmpty {
+			LogCapture.shared.printLog("   ↳ Xoá \(_options.removeFiles.count) file không cần thiết...")
 			try await _removeFiles(for: movedAppPath, from: _options.removeFiles)
 		}
 		
 		try await _removePresetFiles(for: movedAppPath)
 		try await _removeWatchIfNeeded(for: movedAppPath)
 		
+		try checkCancelled()
+		LogCapture.shared.updateProgress(phase: .modifying, subProgress: 0.5)
+		
 		if _options.experiment_supportLiquidGlass {
+			LogCapture.shared.printLog("   ↳ Hỗ trợ Liquid Glass (SDK 26)...")
 			try await _locateMachosAndChangeToSDK26(for: movedAppPath)
 		}
 		
 		if _options.experiment_replaceSubstrateWithEllekit {
+			LogCapture.shared.printLog("   ↳ Tiêm tweak (Ellekit)...")
 			try await _inject(for: movedAppPath, with: _options)
 		} else {
 			if !_options.injectionFiles.isEmpty {
+				LogCapture.shared.printLog("   ↳ Tiêm \(_options.injectionFiles.count) dylib...")
 				try await _inject(for: movedAppPath, with: _options)
 			}
 		}
 		
+		try checkCancelled()
+		LogCapture.shared.updateProgress(phase: .modifying, subProgress: 0.6)
+		
 		// iOS "26" (19) needs special treatment
+		LogCapture.shared.printLog("   ↳ Fixup ARM64e slices...")
 		try await _locateMachosAndFixupArm64eSlice(for: movedAppPath)
+		
+		LogCapture.shared.updateProgress(phase: .modifying, subProgress: 0.7)
 		
 		let handler = ZsignHandler(appUrl: movedAppPath, options: _options, cert: appCertificate)
 		if !_options.disInjectionFiles.isEmpty {
-			LogCapture.shared.printLog("Đang gỡ bỏ (Disinject) thư viện...")
+			LogCapture.shared.printLog("🗑 Đang gỡ bỏ (Disinject) \(_options.disInjectionFiles.count) thư viện...")
 		}
 		try await handler.disinject()
 		
+		try checkCancelled()
+		LogCapture.shared.updateProgress(phase: .modifying, subProgress: 0.8)
+		
+		// MARK: - Signing Phase
 		if
 			_options.signingOption == .default,
 			appCertificate != nil
 		{
+			LogCapture.shared.setPhase(.signing)
+			LogCapture.shared.printLog("🔐 Bắt đầu ký ứng dụng...")
+			LogCapture.shared.printLog("   ↳ Tính toán SHA hash cho tất cả file...")
+			LogCapture.shared.updateProgress(phase: .signing, subProgress: 0.05)
 			try await handler.sign()
+			LogCapture.shared.updateProgress(phase: .signing, subProgress: 1.0)
+			LogCapture.shared.printLog("✅ Ký hoàn tất!")
 //		} else if _options.signingOption == .adhoc {
 //			try await handler.adhocSign()
 		} else if _options.signingOption == .onlyModify {
-			//
+			LogCapture.shared.printLog("ℹ️ Chế độ chỉ tuỳ chỉnh (không ký).")
 		} else {
 			throw SigningFileHandlerError.missingCertifcate
 		}
 		
-		LogCapture.shared.printLog("Hoàn tất và lưu vào cơ sở dữ liệu...")
+		try checkCancelled()
+		
+		// MARK: - Saving Phase
+		LogCapture.shared.setPhase(.saving)
+		LogCapture.shared.printLog("💾 Hoàn tất và lưu vào cơ sở dữ liệu...")
+		LogCapture.shared.updateProgress(phase: .saving, subProgress: 0.2)
 		try await self.move()
+		LogCapture.shared.updateProgress(phase: .saving, subProgress: 0.7)
 		try await self.addToDatabase()
+		LogCapture.shared.updateProgress(phase: .saving, subProgress: 1.0)
+		LogCapture.shared.printLog("✅ Đã lưu thành công!")
 		
 		if let error = handler.hadError {
 			throw error
@@ -210,6 +331,30 @@ final class SigningHandler: NSObject {
 	
 	func clean() async throws {
 		try _fileManager.removeFileIfNeeded(at: _uniqueWorkDir)
+	}
+	
+	// MARK: - Utility
+	
+	private func calculateDirectorySize(url: URL) -> Int64 {
+		var totalSize: Int64 = 0
+		if let enumerator = _fileManager.enumerator(at: url,
+			includingPropertiesForKeys: [.fileSizeKey],
+			options: [.skipsHiddenFiles]) {
+			for case let fileURL as URL in enumerator {
+				if let fileSize = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize {
+					totalSize += Int64(fileSize)
+				}
+			}
+		}
+		return totalSize
+	}
+	
+	private func formatBytes(_ bytes: Int64) -> String {
+		let mb = Double(bytes) / 1_000_000
+		if mb > 1000 {
+			return String(format: "%.1f GB", mb / 1000)
+		}
+		return String(format: "%.1f MB", mb)
 	}
 }
 
@@ -478,6 +623,7 @@ enum SigningFileHandlerError: Error, LocalizedError {
 	case missingCertifcate
 	case disinjectFailed
 	case signFailed
+	case cancelled
 	
 	var errorDescription: String? {
 		switch self {
@@ -486,6 +632,7 @@ enum SigningFileHandlerError: Error, LocalizedError {
 		case .missingCertifcate: "No certificate was specified."
 		case .disinjectFailed: "Removing mach-O load paths failed."
 		case .signFailed: "Signing failed."
+		case .cancelled: "Quá trình ký đã bị huỷ bởi người dùng."
 		}
 	}
 }

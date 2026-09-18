@@ -138,7 +138,7 @@ struct SigningView: View {
 				SigningLogView(app: app, options: _temporaryOptions, error: _signError) {
 					// On Dismiss callback
 					_isSigning = false
-					if _signError == nil && _signFinished {
+					if _signError == nil && _signFinished && !LogCapture.shared.isCancelled {
 						let successFeedback = UINotificationFeedbackGenerator()
 						successFeedback.notificationOccurred(.success)
 						if _temporaryOptions.post_deleteAppAfterSigned, !app.isSigned {

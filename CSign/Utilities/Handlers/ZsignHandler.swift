@@ -52,7 +52,15 @@ final class ZsignHandler {
 
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
+                LogCapture.shared.updateProgress(phase: .signing, subProgress: 0.1)
+                LogCapture.shared.printLog("   ↳ Khởi tạo chứng chỉ ký...")
+                
                 var localErr: Error? = nil
+                LogCapture.shared.updateProgress(phase: .signing, subProgress: 0.15)
+                LogCapture.shared.printLog("   ↳ Đang ký tất cả Mach-O binaries...")
+                
+                let startTime = CFAbsoluteTimeGetCurrent()
+                
                 let success = Zsign.sign(
                     appPath: self._appUrl.relativePath,
                     provisionPath: Storage.shared.getFile(.provision, from: cert)?.path ?? "",
@@ -67,6 +75,11 @@ final class ZsignHandler {
                         localErr = error
                     }
                 )
+                
+                let elapsed = CFAbsoluteTimeGetCurrent() - startTime
+                LogCapture.shared.printLog("   ↳ Thời gian ký: \(String(format: "%.1f", elapsed))s")
+                LogCapture.shared.updateProgress(phase: .signing, subProgress: 0.95)
+                
                 if !success {
                     continuation.resume(throwing: localErr ?? SigningFileHandlerError.signFailed)
                 } else {
