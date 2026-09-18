@@ -1,6 +1,12 @@
 import Foundation
 import Combine
 
+private final class CancelState: @unchecked Sendable {
+    let lock = NSLock()
+    var flag = false
+}
+private let _cancelState = CancelState()
+
 @MainActor
 final class LogCapture: ObservableObject {
 	static let shared = LogCapture()
@@ -11,21 +17,17 @@ final class LogCapture: ObservableObject {
 	@Published var currentPhase: SigningPhase = .idle
 	@Published var isCancelled = false
 	
-	/// Thread-safe cancelled flag accessible from any thread
-	private static let _cancelledLock = NSLock()
-	private static var _cancelledFlag = false
-	
 	/// Nonisolated thread-safe check for cancellation
 	nonisolated static var isCancelledSync: Bool {
-		_cancelledLock.lock()
-		defer { _cancelledLock.unlock() }
-		return _cancelledFlag
+		_cancelState.lock.lock()
+		defer { _cancelState.lock.unlock() }
+		return _cancelState.flag
 	}
 	
-	private static func setCancelledSync(_ value: Bool) {
-		_cancelledLock.lock()
-		_cancelledFlag = value
-		_cancelledLock.unlock()
+	nonisolated static func setCancelledSync(_ value: Bool) {
+		_cancelState.lock.lock()
+		_cancelState.flag = value
+		_cancelState.lock.unlock()
 	}
 	
 	/// Phases with their weight in the overall 0-100% progress
