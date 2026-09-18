@@ -33,7 +33,7 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 			var news = firstSource.repository.news ?? []
 			
 			// Hardcode injection of banners for the specific repo
-			if firstSource.repository.identifier == "kh.crysalis.csign-repo" {
+			if firstSource.repository.id == "kh.crysalis.csign-repo" {
 				let banner1 = ASRepository.News(
 					id: "csign-buy-cert-hardcoded",
 					title: "🛒 Mua Chứng Chỉ Apple Giá Rẻ",
