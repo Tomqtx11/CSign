@@ -56,7 +56,7 @@ let package = Package(
 			cxxSettings: [
 				.headerSearchPath("."),
 				.headerSearchPath("common"),
-				.unsafeFlags(["-std=c++17", "-O3"])
+				.unsafeFlags(["-std=c++17"])
 			],
 			linkerSettings: [
 				.linkedFramework("OpenSSL"),

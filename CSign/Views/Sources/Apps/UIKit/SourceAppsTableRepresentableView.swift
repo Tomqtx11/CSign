@@ -57,7 +57,7 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 			{
 				var news = firstSource.repository.news ?? []
 				
-				if firstSource.repository.id == "kh.crysalis.csign-repo" {
+				if firstSource.repository.id == "kh.crysalis.csign-repo" || firstSource.repository.name?.localizedCaseInsensitiveContains("csign") == true {
 					let banner1 = ASRepository.News(
 						id: "csign-buy-cert-hardcoded",
 						title: "🛒 Mua Chứng Chỉ Apple Giá Rẻ",

@@ -82,11 +82,6 @@ struct LibraryCellView: View {
 				selectedSigningAppPresenting = AnyApp(base: app, restoredOptions: loadedOptions)
 			}
 		}
-		.swipeActions {
-			if !isEditing {
-				_actions(for: app)
-			}
-		}
 		.contextMenu {
 			if !isEditing {
 				_contextActions(for: app)

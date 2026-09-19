@@ -229,6 +229,12 @@ struct HistoryView: View {
 							}
                         )
                     }
+					.onDelete { indexSet in
+						for index in indexSet {
+							let app = _filteredSignedApps[index]
+							Storage.shared.deleteApp(for: app)
+						}
+					}
                 }
             }
         }

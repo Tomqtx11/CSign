@@ -94,6 +94,12 @@ struct LibraryView: View {
 								}
 							)
 						}
+						.onDelete { indexSet in
+							for index in indexSet {
+								let app = _filteredImportedApps[index]
+								Storage.shared.deleteApp(for: app)
+							}
+						}
 					}
 				}
 			}
