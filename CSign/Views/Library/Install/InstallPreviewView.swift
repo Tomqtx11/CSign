@@ -115,10 +115,12 @@ struct InstallPreviewView: View {
 			Label(viewModel.statusLabel, systemImage: viewModel.statusImage)
 				.labelStyle(.titleAndIcon)
 			
-			if viewModel.status == .none && viewModel.packageProgress > 0 && viewModel.packageProgress < 1.0 {
-				Text("Đang nén: \(Int(viewModel.packageProgress * 100))%")
-					.font(.caption)
-					.foregroundColor(.secondary)
+			if case .none = viewModel.status {
+				if viewModel.packageProgress > 0 && viewModel.packageProgress < 1.0 {
+					Text("Đang nén: \(Int(viewModel.packageProgress * 100))%")
+						.font(.caption)
+						.foregroundColor(.secondary)
+				}
 			}
 		}
 		.padding()
