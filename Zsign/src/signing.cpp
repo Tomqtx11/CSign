@@ -513,11 +513,12 @@ bool ZSign::SlotBuildCodeDirectory(bool bAlternate,
 		vector<string> pageHashes(uPages);
 #ifdef __APPLE__
 		dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+		string* pPageHashes = pageHashes.data();
 		dispatch_apply(uPages, queue, ^(size_t i) {
 			if (1 == cdHeader.hashType) {
-				ZSHA::SHA1(pCodeBase + uPageSize * i, uPageSize, pageHashes[i]);
+				ZSHA::SHA1(pCodeBase + uPageSize * i, uPageSize, pPageHashes[i]);
 			} else {
-				ZSHA::SHA256(pCodeBase + uPageSize * i, uPageSize, pageHashes[i]);
+				ZSHA::SHA256(pCodeBase + uPageSize * i, uPageSize, pPageHashes[i]);
 			}
 		});
 #else

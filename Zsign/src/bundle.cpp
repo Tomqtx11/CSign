@@ -165,9 +165,11 @@ bool ZBundle::GenerateCodeResources(const string& strFolder, jvalue& jvCodeRes)
 
 #ifdef __APPLE__
     dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+    HashResult* pHashResults = hashResults.data();
+    const string* pFilesVector = filesVector.data();
     dispatch_apply(filesVector.size(), queue, ^(size_t i) {
-        string strFile = strFolder + "/" + filesVector[i];
-        ZSHA::SHABase64File(strFile.c_str(), hashResults[i].strSHA1Base64, hashResults[i].strSHA256Base64);
+        string strFile = strFolder + "/" + pFilesVector[i];
+        ZSHA::SHABase64File(strFile.c_str(), pHashResults[i].strSHA1Base64, pHashResults[i].strSHA256Base64);
     });
 #else
     for (size_t i = 0; i < filesVector.size(); ++i) {
