@@ -3,7 +3,9 @@
 #include "mach-o.h"
 #include "openssl.h"
 #include "signing.h"
-
+#ifdef __APPLE__
+#include <dispatch/dispatch.h>
+#endif
 void ZSign::_DERLength(string& strBlob, uint64_t uLength)
 {
 	if (uLength < 128) {
@@ -508,15 +510,29 @@ bool ZSign::SlotBuildCodeDirectory(bool bAlternate,
 	if (NULL != pCodeSlotsData && (uCodeSlotsDataLength == uCodeSlots * cdHeader.hashSize)) { //use exists
 		strOutput.append((const char*)pCodeSlotsData, uCodeSlotsDataLength);
 	} else {
-		for (uint32_t i = 0; i < uPages; i++) {
-			string strSHASum;
+		vector<string> pageHashes(uPages);
+#ifdef __APPLE__
+		dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+		dispatch_apply(uPages, queue, ^(size_t i) {
 			if (1 == cdHeader.hashType) {
-				ZSHA::SHA1(pCodeBase + uPageSize * i, uPageSize, strSHASum);
+				ZSHA::SHA1(pCodeBase + uPageSize * i, uPageSize, pageHashes[i]);
+			} else {
+				ZSHA::SHA256(pCodeBase + uPageSize * i, uPageSize, pageHashes[i]);
+			}
+		});
+#else
+		for (uint32_t i = 0; i < uPages; i++) {
+			if (1 == cdHeader.hashType) {
+				ZSHA::SHA1(pCodeBase + uPageSize * i, uPageSize, pageHashes[i]);
 			} else  {
-				ZSHA::SHA256(pCodeBase + uPageSize * i, uPageSize, strSHASum);
+				ZSHA::SHA256(pCodeBase + uPageSize * i, uPageSize, pageHashes[i]);
 			} 
-			strOutput.append(strSHASum.data(), strSHASum.size());
 		}
+#endif
+		for (uint32_t i = 0; i < uPages; i++) {
+			strOutput.append(pageHashes[i].data(), pageHashes[i].size());
+		}
+		
 		if (uRemain > 0) {
 			string strSHASum;
 			if (1 == cdHeader.hashType) {

@@ -4,6 +4,9 @@
 #include "macho.h"
 #include "sys/stat.h"
 #include "sys/types.h"
+#ifdef __APPLE__
+#include <dispatch/dispatch.h>
+#endif
 
 ZBundle::ZBundle()
 {
@@ -153,11 +156,30 @@ bool ZBundle::GenerateCodeResources(const string& strFolder, jvalue& jvCodeRes)
 	jvCodeRes["files"] = jvalue(jvalue::E_OBJECT);
 	jvCodeRes["files2"] = jvalue(jvalue::E_OBJECT);
 
-	for (string strKey : setFiles) {
-		string strFile = strFolder + "/" + strKey;
-		string strSHA1Base64;
-		string strSHA256Base64;
-		ZSHA::SHABase64File(strFile.c_str(), strSHA1Base64, strSHA256Base64);
+    vector<string> filesVector(setFiles.begin(), setFiles.end());
+    struct HashResult {
+        string strSHA1Base64;
+        string strSHA256Base64;
+    };
+    vector<HashResult> hashResults(filesVector.size());
+
+#ifdef __APPLE__
+    dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
+    dispatch_apply(filesVector.size(), queue, ^(size_t i) {
+        string strFile = strFolder + "/" + filesVector[i];
+        ZSHA::SHABase64File(strFile.c_str(), hashResults[i].strSHA1Base64, hashResults[i].strSHA256Base64);
+    });
+#else
+    for (size_t i = 0; i < filesVector.size(); ++i) {
+        string strFile = strFolder + "/" + filesVector[i];
+        ZSHA::SHABase64File(strFile.c_str(), hashResults[i].strSHA1Base64, hashResults[i].strSHA256Base64);
+    }
+#endif
+
+	for (size_t i = 0; i < filesVector.size(); ++i) {
+		string strKey = filesVector[i];
+		string strSHA1Base64 = hashResults[i].strSHA1Base64;
+		string strSHA256Base64 = hashResults[i].strSHA256Base64;
 
 #ifdef _WIN32
 		strKey = ic.A2U8(strKey);
