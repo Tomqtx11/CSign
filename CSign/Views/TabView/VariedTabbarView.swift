@@ -8,13 +8,47 @@
 import SwiftUI
 
 struct VariedTabbarView: View {
-	init() {}
+	@FetchRequest(
+		entity: CertificatePair.entity(),
+		sortDescriptors: []
+	) private var _certificates: FetchedResults<CertificatePair>
 	
+	@State private var _showMissingCertAlert = false
+	@State private var _showCertificatesModal = false
+	@AppStorage("hasPromptedMissingCert") private var hasPromptedMissingCert = false
+
 	var body: some View {
-		if #available(iOS 18, *) {
-			ExtendedTabbarView()
-		} else {
-			TabbarView()
+		Group {
+			if #available(iOS 18, *) {
+				ExtendedTabbarView()
+			} else {
+				TabbarView()
+			}
+		}
+		.onAppear {
+			// Delay slightly so it shows on top of other initial UI (like Disclaimer)
+			DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+				if _certificates.isEmpty && !hasPromptedMissingCert {
+					_showMissingCertAlert = true
+				}
+			}
+		}
+		.alert("Chưa Có Chứng Chỉ", isPresented: $_showMissingCertAlert) {
+			Button("Hủy", role: .cancel) {
+				hasPromptedMissingCert = true
+			}
+			Button("Nhập Ngay") {
+				hasPromptedMissingCert = true
+				_showCertificatesModal = true
+			}
+		} message: {
+			Text("Bạn cần thêm ít nhất một chứng chỉ (Certificate) trước khi có thể ký ứng dụng. Vui lòng nhập chứng chỉ ngay.")
+		}
+		.sheet(isPresented: $_showCertificatesModal) {
+			NavigationView {
+				CertificatesView()
+					.navigationBarTitleDisplayMode(.inline)
+			}
 		}
 	}
 }

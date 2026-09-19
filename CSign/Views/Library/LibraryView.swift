@@ -83,9 +83,16 @@ struct LibraryView: View {
 								selectedInfoAppPresenting: $_selectedInfoAppPresenting,
 								selectedSigningAppPresenting: $_selectedSigningAppPresenting,
 								selectedInstallAppPresenting: $_selectedInstallAppPresenting,
-								selectedAppUUIDs: $_selectedAppUUIDs
+								isSelected: _selectedAppUUIDs.contains(app.uuid ?? ""),
+								toggleSelection: {
+									guard let uuid = app.uuid else { return }
+									if _selectedAppUUIDs.contains(uuid) {
+										_selectedAppUUIDs.remove(uuid)
+									} else {
+										_selectedAppUUIDs.insert(uuid)
+									}
+								}
 							)
-							.compatMatchedTransitionSource(id: app.uuid ?? "", ns: _namespace)
 						}
 					}
 				}

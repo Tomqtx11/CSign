@@ -111,11 +111,19 @@ struct InstallPreviewView: View {
 	
 	@ViewBuilder
 	private func _status() -> some View {
-		Label(viewModel.statusLabel, systemImage: viewModel.statusImage)
-			.padding()
-			.labelStyle(.titleAndIcon)
-			.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-			.animation(.smooth, value: viewModel.statusImage)
+		VStack(alignment: .leading, spacing: 4) {
+			Label(viewModel.statusLabel, systemImage: viewModel.statusImage)
+				.labelStyle(.titleAndIcon)
+			
+			if viewModel.status == .none && viewModel.packageProgress > 0 && viewModel.packageProgress < 1.0 {
+				Text("Đang nén: \(Int(viewModel.packageProgress * 100))%")
+					.font(.caption)
+					.foregroundColor(.secondary)
+			}
+		}
+		.padding()
+		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+		.animation(.smooth, value: viewModel.statusImage)
 	}
 	
 	@ViewBuilder

@@ -41,24 +41,7 @@ final class ArchiveHandler: NSObject {
 
 		try _fileManager.createDirectoryIfNeeded(at: payloadUrl)
 		
-		// Use hard links instead of copyItem to make this instantaneous
-		try _fileManager.createDirectory(at: movedAppURL, withIntermediateDirectories: true)
-		
-		if let enumerator = _fileManager.enumerator(at: appUrl, includingPropertiesForKeys: nil) {
-			for case let fileURL as URL in enumerator {
-				let relativePath = fileURL.path.replacingOccurrences(of: appUrl.path + "/", with: "")
-				let destURL = movedAppURL.appendingPathComponent(relativePath)
-				
-				var isDir: ObjCBool = false
-				_fileManager.fileExists(atPath: fileURL.path, isDirectory: &isDir)
-				
-				if isDir.boolValue {
-					try? _fileManager.createDirectory(at: destURL, withIntermediateDirectories: true)
-				} else {
-					try? _fileManager.linkItem(at: fileURL, to: destURL)
-				}
-			}
-		}
+		try _fileManager.copyItem(at: appUrl, to: movedAppURL)
 		
 		_payloadUrl = payloadUrl
 	}

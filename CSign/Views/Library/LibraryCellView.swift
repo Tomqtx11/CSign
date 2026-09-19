@@ -29,22 +29,8 @@ struct LibraryCellView: View {
 	@Binding var selectedInfoAppPresenting: AnyApp?
 	@Binding var selectedSigningAppPresenting: AnyApp?
 	@Binding var selectedInstallAppPresenting: AnyApp?
-	@Binding var selectedAppUUIDs: Set<String>
-	
-	// MARK: Selections
-	private var _isSelected: Bool {
-		guard let uuid = app.uuid else { return false }
-		return selectedAppUUIDs.contains(uuid)
-	}
-	
-	private func _toggleSelection() {
-		guard let uuid = app.uuid else { return }
-		if selectedAppUUIDs.contains(uuid) {
-			selectedAppUUIDs.remove(uuid)
-		} else {
-			selectedAppUUIDs.insert(uuid)
-		}
-	}
+	var isSelected: Bool
+	var toggleSelection: () -> Void
 	
 	// MARK: Body
 	var body: some View {
@@ -54,11 +40,11 @@ struct LibraryCellView: View {
 		HStack(spacing: 18) {
 			if isEditing {
 				Button {
-					_toggleSelection()
+					toggleSelection()
 				} label: {
-					Image(systemName: _isSelected ? "checkmark.circle.fill" : "circle")
-						.foregroundColor(_isSelected ? .accentColor : .secondary)
-						.font(.title2)
+					Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+						.foregroundColor(isSelected ? .accentColor : .secondary)
+						.font(.title3)
 				}
 				.buttonStyle(.borderless)
 			}
@@ -79,13 +65,13 @@ struct LibraryCellView: View {
 		.background(
 			isRegular
 				? RoundedRectangle(cornerRadius: 18, style: .continuous)
-				.fill(_isSelected && isEditing ? Color.accentColor.opacity(0.1) : Color(.quaternarySystemFill))
+				.fill(isSelected && isEditing ? Color.accentColor.opacity(0.1) : Color(.quaternarySystemFill))
 				: nil
 		)
 		.contentShape(Rectangle())
 		.onTapGesture {
 			if isEditing {
-				_toggleSelection()
+				toggleSelection()
 			} else if app.isSigned {
                 var loadedOptions: Options? = nil
 				if let uuid = app.uuid,
