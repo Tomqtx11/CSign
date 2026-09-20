@@ -91,6 +91,15 @@ struct LibraryCellView: View {
 				_actions(for: app)
 			}
 		}
+		.swipeActions(edge: .trailing, allowsFullSwipe: true) {
+			if !isEditing {
+				Button(role: .destructive) {
+					Storage.shared.deleteApp(for: app)
+				} label: {
+					Label(.localized("Delete"), systemImage: "trash")
+				}
+			}
+		}
 		.confirmationDialog(
 			.localized("Update Available"),
 			isPresented: $_isSignedUpdateConfirmationPresented,

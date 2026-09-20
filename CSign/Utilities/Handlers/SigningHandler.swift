@@ -235,6 +235,14 @@ final class SigningHandler: NSObject {
 			LogCapture.shared.printLog("🔐 Bắt đầu ký ứng dụng...")
 			LogCapture.shared.printLog("   ↳ Tính toán SHA hash cho tất cả file...")
 			LogCapture.shared.updateProgress(phase: .signing, subProgress: 0.05)
+			
+			// Inject provision profile into app bundle manually since zsign doesn't do it automatically
+			if let cert = appCertificate, let prov = Storage.shared.getFile(.provision, from: cert) {
+				let dest = movedAppPath.appendingPathComponent("embedded.mobileprovision")
+				try? _fileManager.removeItem(at: dest)
+				try? _fileManager.copyItem(at: prov, to: dest)
+			}
+			
 			try await handler.sign()
 			LogCapture.shared.updateProgress(phase: .signing, subProgress: 1.0)
 			LogCapture.shared.printLog("✅ Ký hoàn tất!")

@@ -137,13 +137,11 @@ extension SourcesView {
 				_bannerCard(
 					imageURL: SourcesView.banner1URL,
 					title: "🛒 Mua Chứng Chỉ",
-					subtitle: "cuios.shop",
 					url: URL(string: "https://cuios.shop")!
 				)
 				_bannerCard(
 					imageURL: SourcesView.banner2URL,
 					title: "👥 Tham Gia Cộng Đồng",
-					subtitle: "t.me/chungchicuios",
 					url: URL(string: "https://t.me/chungchicuios")!
 				)
 			}
@@ -157,7 +155,6 @@ extension SourcesView {
 	private func _bannerCard(
 		imageURL: URL,
 		title: String,
-		subtitle: String,
 		url: URL
 	) -> some View {
 		Button {
@@ -194,10 +191,6 @@ extension SourcesView {
 					Text(title)
 						.font(.system(size: 14, weight: .bold))
 						.foregroundColor(.white)
-						.shadow(radius: 2)
-					Text(subtitle)
-						.font(.system(size: 11, weight: .medium))
-						.foregroundColor(.white.opacity(0.85))
 						.shadow(radius: 2)
 				}
 				.padding(10)

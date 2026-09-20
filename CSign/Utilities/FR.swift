@@ -11,6 +11,8 @@ import Zsign
 import NimbleJSON
 import AltSourceKit
 import IDeviceSwift
+import UserNotifications
+import UIKit
 
 enum FR {
 	static func handlePackageFile(
@@ -19,6 +21,12 @@ enum FR {
 		sourceProvenance: SourceAppProvenance? = nil,
 		completion: @escaping (Error?) -> Void
 	) {
+		var bgTask: UIBackgroundTaskIdentifier = .invalid
+		bgTask = UIApplication.shared.beginBackgroundTask {
+			UIApplication.shared.endBackgroundTask(bgTask)
+			bgTask = .invalid
+		}
+		
 		Task.detached {
 			let handler = AppFileHandler(
 				file: ipa,
@@ -32,13 +40,24 @@ enum FR {
 				try await handler.move()
 				try await handler.addToDatabase()
 				try? await handler.clean()
+				
+				// Post notification
+				let content = UNMutableNotificationContent()
+				content.title = .localized("Cài Đặt Hoàn Tất")
+				content.body = .localized("Ứng dụng đã được thêm vào thư viện thành công.")
+				content.sound = .default
+				let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+				try? await UNUserNotificationCenter.current().add(request)
+				
 				await MainActor.run {
 					completion(nil)
+					UIApplication.shared.endBackgroundTask(bgTask)
 				}
 			} catch {
 				try? await handler.clean()
 				await MainActor.run {
 					completion(error)
+					UIApplication.shared.endBackgroundTask(bgTask)
 				}
 			}
 		}
@@ -51,6 +70,12 @@ enum FR {
 		certificate: CertificatePair?,
 		completion: @escaping (Error?) -> Void
 	) {
+		var bgTask: UIBackgroundTaskIdentifier = .invalid
+		bgTask = UIApplication.shared.beginBackgroundTask {
+			UIApplication.shared.endBackgroundTask(bgTask)
+			bgTask = .invalid
+		}
+		
 		Task.detached {
 			let handler = SigningHandler(app: app, options: options)
 			handler.appCertificate = certificate
@@ -62,7 +87,10 @@ enum FR {
 				// Check cancel between major steps
 				if LogCapture.isCancelledSync {
 					try? await handler.clean()
-					await MainActor.run { completion(SigningFileHandlerError.cancelled) }
+					await MainActor.run { 
+						completion(SigningFileHandlerError.cancelled) 
+						UIApplication.shared.endBackgroundTask(bgTask)
+					}
 					return
 				}
 				
@@ -70,18 +98,32 @@ enum FR {
 				
 				if LogCapture.isCancelledSync {
 					try? await handler.clean()
-					await MainActor.run { completion(SigningFileHandlerError.cancelled) }
+					await MainActor.run { 
+						completion(SigningFileHandlerError.cancelled) 
+						UIApplication.shared.endBackgroundTask(bgTask)
+					}
 					return
 				}
 				
 				try? await handler.clean()
+				
+				// Post notification
+				let content = UNMutableNotificationContent()
+				content.title = .localized("Ký Ứng Dụng Hoàn Tất")
+				content.body = .localized("Ứng dụng \(app.name ?? "") đã được ký thành công.")
+				content.sound = .default
+				let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+				try? await UNUserNotificationCenter.current().add(request)
+				
 				await MainActor.run {
 					completion(nil)
+					UIApplication.shared.endBackgroundTask(bgTask)
 				}
 			} catch {
 				try? await handler.clean()
 				await MainActor.run {
 					completion(error)
+					UIApplication.shared.endBackgroundTask(bgTask)
 				}
 			}
 		}

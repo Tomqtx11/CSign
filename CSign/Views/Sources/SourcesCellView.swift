@@ -21,7 +21,7 @@ struct SourcesCellView: View {
 		
 		FRIconCellView(
 			title: source.name ?? .localized("Unknown"),
-			subtitle: source.sourceURL?.absoluteString ?? .localized("Unknown"),
+			subtitle: "Kho ứng dụng",
 			iconUrl: source.iconURL
 		)
 		.padding(isRegular ? 12 : 0)
