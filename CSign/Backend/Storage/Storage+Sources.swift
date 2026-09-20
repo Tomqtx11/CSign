@@ -114,7 +114,3 @@ extension Storage {
 	}
 }
 
-// MARK: - Identifiable (for SwiftUI sheet presentation)
-extension AltSource: Identifiable {
-	public var id: String { identifier }
-}
