@@ -522,9 +522,12 @@ extension SigningHandler {
 	}
 	
 	private func _removePresetFiles(for app: URL) async throws {
+		// IMPORTANT: Do NOT remove embedded.mobileprovision here.
+		// zsign needs the provision file to be present (or absent based on removeProvision option).
+		// Removing it before signing causes iOS to fail verification ("cannot be verified").
+		// zsign handles provision embedding via its removeProvision parameter.
 		var files = [
-			"_CodeSignature", // Fallbaccck for some reason the locate doesnt work
-			"embedded.mobileprovision", // Remove this because zsign doesn't replace it
+			"_CodeSignature", // Fallback for some reason the locate doesnt work
 			"com.apple.WatchPlaceholder", // Useless
 			"SignedByEsign" // Useless
 		].map {

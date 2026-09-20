@@ -23,57 +23,60 @@ struct CSignApp: App {
 	
 	@Environment(\.scenePhase) var scenePhase
 	@State private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+	// Track if this is the very first render so disclaimer shows immediately
+	@State private var _hasRendered = false
 
 	var body: some Scene {
 		WindowGroup {
-			VStack {
-				DownloadHeaderView(downloadManager: downloadManager)
-					.transition(.move(edge: .top).combined(with: .opacity))
-				VariedTabbarView()
-					.environment(\.managedObjectContext, storage.context)
-					.onOpenURL(perform: _handleURL)
-					.transition(.move(edge: .top).combined(with: .opacity))
-			}
-			.animation(.smooth, value: downloadManager.manualDownloads.description)
-			.onReceive(NotificationCenter.default.publisher(for: .heartbeatInvalidHost)) { _ in
-				DispatchQueue.main.async {
-					UIAlertController.showAlertWithOk(
-						title: "InvalidHostID",
-						message: .localized("Your pairing file is invalid and is incompatible with your device, please import a valid pairing file.")
-					)
-				}
-			}
-			// dear god help me
-			.onAppear {
-				if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "CSign.userInterfaceStyle")) {
-					UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
-				}
-				
-				UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "CSign.userTintColor") ?? "#848ef9"))
-			}
-			
-			
-			.onChange(of: scenePhase) { newPhase in
-				if newPhase == .background {
-					if downloadManager.downloads.count > 0 {
-						backgroundTask = UIApplication.shared.beginBackgroundTask {
-							UIApplication.shared.endBackgroundTask(backgroundTask)
-							backgroundTask = .invalid
+			Group {
+				if !hasAcceptedDisclaimer {
+					// Show disclaimer immediately on first launch, no delay
+					DisclaimerView(hasAcceptedDisclaimer: $hasAcceptedDisclaimer)
+						.transition(.opacity)
+				} else {
+					VStack {
+						DownloadHeaderView(downloadManager: downloadManager)
+							.transition(.move(edge: .top).combined(with: .opacity))
+						VariedTabbarView()
+							.environment(\.managedObjectContext, storage.context)
+							.onOpenURL(perform: _handleURL)
+							.transition(.move(edge: .top).combined(with: .opacity))
+					}
+					.animation(.smooth, value: downloadManager.manualDownloads.description)
+					.onReceive(NotificationCenter.default.publisher(for: .heartbeatInvalidHost)) { _ in
+						DispatchQueue.main.async {
+							UIAlertController.showAlertWithOk(
+								title: "InvalidHostID",
+								message: .localized("Your pairing file is invalid and is incompatible with your device, please import a valid pairing file.")
+							)
+						}
+					}
+					// dear god help me
+					.onAppear {
+						if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "CSign.userInterfaceStyle")) {
+							UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
 						}
 						
-
+						UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "CSign.userTintColor") ?? "#848ef9"))
 					}
-				} else if newPhase == .active {
-					if backgroundTask != .invalid {
-						UIApplication.shared.endBackgroundTask(backgroundTask)
-						backgroundTask = .invalid
+					.onChange(of: scenePhase) { newPhase in
+						if newPhase == .background {
+							if downloadManager.downloads.count > 0 {
+								backgroundTask = UIApplication.shared.beginBackgroundTask {
+									UIApplication.shared.endBackgroundTask(backgroundTask)
+									backgroundTask = .invalid
+								}
+							}
+						} else if newPhase == .active {
+							if backgroundTask != .invalid {
+								UIApplication.shared.endBackgroundTask(backgroundTask)
+								backgroundTask = .invalid
+							}
+						}
 					}
 				}
 			}
-			.fullScreenCover(isPresented: Binding(get: { !hasAcceptedDisclaimer }, set: { _ in })) {
-				DisclaimerView(hasAcceptedDisclaimer: $hasAcceptedDisclaimer)
-			}
-
+			.animation(.easeInOut(duration: 0.35), value: hasAcceptedDisclaimer)
 		}
 	}
 	

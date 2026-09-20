@@ -72,6 +72,39 @@ struct LibraryView: View {
 	var body: some View {
 		NBNavigationView(.localized("Library")) {
 			NBListAdaptable {
+				if !_filteredSignedApps.isEmpty {
+					NBSection(
+						.localized("Signed"),
+						secondary: _filteredSignedApps.count.description
+					) {
+						ForEach(_filteredSignedApps, id: \.uuid) { app in
+							LibraryCellView(
+								app: app,
+								selectedInfoAppPresenting: $_selectedInfoAppPresenting,
+								selectedSigningAppPresenting: $_selectedSigningAppPresenting,
+								selectedInstallAppPresenting: $_selectedInstallAppPresenting,
+								isSelected: _selectedAppUUIDs.contains(app.uuid ?? ""),
+								toggleSelection: {
+									guard let uuid = app.uuid else { return }
+									if _selectedAppUUIDs.contains(uuid) {
+										_selectedAppUUIDs.remove(uuid)
+									} else {
+										_selectedAppUUIDs.insert(uuid)
+									}
+								}
+							)
+						}
+						.onDelete { indexSet in
+							for index in indexSet {
+								let app = _filteredSignedApps[index]
+								// Delete on background thread to avoid UI lag for large apps
+								DispatchQueue.global(qos: .userInitiated).async {
+									Storage.shared.deleteApp(for: app)
+								}
+							}
+						}
+					}
+				}
 				if !_filteredImportedApps.isEmpty {
 					NBSection(
 						.localized("Imported"),
@@ -97,7 +130,9 @@ struct LibraryView: View {
 						.onDelete { indexSet in
 							for index in indexSet {
 								let app = _filteredImportedApps[index]
-								Storage.shared.deleteApp(for: app)
+								DispatchQueue.global(qos: .userInitiated).async {
+									Storage.shared.deleteApp(for: app)
+								}
 							}
 						}
 					}
@@ -106,7 +141,7 @@ struct LibraryView: View {
 			.searchable(text: $_searchText, placement: .platform())
 			.scrollDismissesKeyboard(.interactively)
 			.overlay {
-				if _filteredImportedApps.isEmpty {
+				if _filteredImportedApps.isEmpty && _filteredSignedApps.isEmpty {
 					if #available(iOS 17, *) {
 						ContentUnavailableView {
 							Label(.localized("No Apps"), systemImage: "questionmark.app.fill")
@@ -243,8 +278,11 @@ extension LibraryView {
 			return _selectedAppUUIDs.contains(uuid)
 		}
 		
-		for app in selectedApps {
-			Storage.shared.deleteApp(for: app)
+		// Delete on background thread to avoid UI lag for large apps
+		DispatchQueue.global(qos: .userInitiated).async {
+			for app in selectedApps {
+				Storage.shared.deleteApp(for: app)
+			}
 		}
 		
 		_selectedAppUUIDs.removeAll()
@@ -253,7 +291,9 @@ extension LibraryView {
 	}
 	
 	private func _getAllApps() -> [AppInfoPresentable] {
-		return _filteredImportedApps
+		// Include both signed and imported apps for bulk operations
+		return _filteredSignedApps.map { $0 as AppInfoPresentable }
+			+ _filteredImportedApps.map { $0 as AppInfoPresentable }
 	}
 	
 	private func _checkForUpdates() async {

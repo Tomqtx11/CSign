@@ -18,6 +18,8 @@ struct SourcesView: View {
 	@State private var _isAddingPresenting = false
 	@State private var _addingSourceLoading = false
 	@State private var _searchText = ""
+	@State private var _editBannerSource: AltSource? = nil
+	@State private var _isEditBannerPresenting = false
 	
 	private var _filteredSources: [AltSource] {
 		_sources.filter { _searchText.isEmpty || ($0.name?.localizedCaseInsensitiveContains(_searchText) ?? false) }
@@ -105,6 +107,15 @@ struct SourcesView: View {
 			}
 			.sheet(isPresented: $_isAddingPresenting) {
 				SourcesAddView()
+			}
+			.sheet(item: $_editBannerSource) { source in
+				SourcesBannerEditView(source: source)
+					.presentationDetents([.medium])
+			}
+			.onReceive(NotificationCenter.default.publisher(for: Notification.Name("CSign.editSourceBanner"))) { notification in
+				if let source = notification.object as? AltSource {
+					_editBannerSource = source
+				}
 			}
 		}
 		.task(id: Array(_sources)) {

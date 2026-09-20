@@ -22,15 +22,22 @@ extension Storage {
 	}
 	
 	func deleteApp(for app: AppInfoPresentable) {
-		do {
-			if let url = getUuidDirectory(for: app) {
+		let uuidDirectory = getUuidDirectory(for: app)
+		let appUUID = app.uuid
+		
+		// Remove files on background thread to avoid UI freeze for large apps
+		DispatchQueue.global(qos: .userInitiated).async {
+			if let url = uuidDirectory {
 				try? FileManager.default.removeItem(at: url)
 			}
-			deleteSourceMetadata(for: app.uuid)
-			if let object = app as? NSManagedObject {
-				context.delete(object)
+			// Update CoreData and metadata on main thread
+			DispatchQueue.main.async {
+				self.deleteSourceMetadata(for: appUUID)
+				if let object = app as? NSManagedObject {
+					self.context.delete(object)
+				}
+				self.saveContext()
 			}
-			saveContext()
 		}
 	}
 	
