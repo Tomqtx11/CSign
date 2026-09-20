@@ -9,6 +9,7 @@ import CoreData
 import AltSourceKit
 import SwiftUI
 import NimbleViews
+import NukeUI
 
 // MARK: - View
 struct SourcesView: View {
@@ -18,8 +19,6 @@ struct SourcesView: View {
 	@State private var _isAddingPresenting = false
 	@State private var _addingSourceLoading = false
 	@State private var _searchText = ""
-	@State private var _editBannerSource: AltSource? = nil
-	@State private var _isEditBannerPresenting = false
 	
 	private var _filteredSources: [AltSource] {
 		_sources.filter { _searchText.isEmpty || ($0.name?.localizedCaseInsensitiveContains(_searchText) ?? false) }
@@ -35,6 +34,14 @@ struct SourcesView: View {
 	var body: some View {
 		NBNavigationView(.localized("Sources")) {
 			NBListAdaptable {
+				// MARK: - Fixed Banners (Mua Chứng Chỉ & Tham gia cộng đồng)
+				Section {
+					_fixedBanners()
+				}
+				.listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+				.listRowBackground(Color.clear)
+				.listRowSeparator(.hidden)
+				
 				if !_filteredSources.isEmpty {
 					Section {
 						NavigationLink {
@@ -108,19 +115,97 @@ struct SourcesView: View {
 			.sheet(isPresented: $_isAddingPresenting) {
 				SourcesAddView()
 			}
-			.sheet(item: $_editBannerSource) { source in
-				SourcesBannerEditView(source: source)
-					.presentationDetents([.medium])
-			}
-			.onReceive(NotificationCenter.default.publisher(for: Notification.Name("CSign.editSourceBanner"))) { notification in
-				if let source = notification.object as? AltSource {
-					_editBannerSource = source
-				}
-			}
 		}
 		.task(id: Array(_sources)) {
 			await viewModel.fetchSources(_sources)
 		}
 		
+	}
+}
+
+// MARK: - Extension: Fixed Banners
+extension SourcesView {
+	// URL ảnh banner từ GitHub (đã có sẵn trong repo)
+	private static let banner1URL = URL(string: "https://raw.githubusercontent.com/Tomqtx11/CSign/main/CSign/Resources/RepoImage1.jpg")!
+	private static let banner2URL = URL(string: "https://raw.githubusercontent.com/Tomqtx11/CSign/main/CSign/Resources/RepoImage2.jpg")!
+	
+	/// 2 banner cố định: Mua Chứng Chỉ & Tham gia cộng đồng
+	@ViewBuilder
+	private func _fixedBanners() -> some View {
+		ScrollView(.horizontal, showsIndicators: false) {
+			HStack(spacing: 12) {
+				_bannerCard(
+					imageURL: SourcesView.banner1URL,
+					title: "🛒 Mua Chứng Chỉ",
+					subtitle: "cuios.shop",
+					url: URL(string: "https://cuios.shop")!
+				)
+				_bannerCard(
+					imageURL: SourcesView.banner2URL,
+					title: "👥 Tham Gia Cộng Đồng",
+					subtitle: "t.me/chungchicuios",
+					url: URL(string: "https://t.me/chungchicuios")!
+				)
+			}
+			.padding(.horizontal, 16)
+			.padding(.vertical, 8)
+		}
+	}
+	
+	/// Một card banner: ảnh từ URL + tiêu đề + bấm mở link
+	@ViewBuilder
+	private func _bannerCard(
+		imageURL: URL,
+		title: String,
+		subtitle: String,
+		url: URL
+	) -> some View {
+		Button {
+			UIApplication.shared.open(url)
+		} label: {
+			ZStack(alignment: .bottomLeading) {
+				// Ảnh banner load từ GitHub
+				LazyImage(url: imageURL) { state in
+					if let image = state.image {
+						image
+							.resizable()
+							.aspectRatio(contentMode: .fill)
+					} else {
+						Color(.systemFill)
+							.overlay(
+								state.isLoading
+									? AnyView(ProgressView())
+									: AnyView(EmptyView())
+							)
+					}
+				}
+				.frame(width: 280, height: 130)
+				.clipped()
+				
+				// Gradient overlay để text dễ đọc
+				LinearGradient(
+					colors: [.clear, .black.opacity(0.7)],
+					startPoint: .top,
+					endPoint: .bottom
+				)
+				
+				// Text overlay
+				VStack(alignment: .leading, spacing: 2) {
+					Text(title)
+						.font(.system(size: 14, weight: .bold))
+						.foregroundColor(.white)
+						.shadow(radius: 2)
+					Text(subtitle)
+						.font(.system(size: 11, weight: .medium))
+						.foregroundColor(.white.opacity(0.85))
+						.shadow(radius: 2)
+				}
+				.padding(10)
+			}
+			.frame(width: 280, height: 130)
+			.clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+			.shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 3)
+		}
+		.buttonStyle(.plain)
 	}
 }
