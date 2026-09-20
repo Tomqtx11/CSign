@@ -97,10 +97,7 @@ struct LibraryView: View {
 						.onDelete { indexSet in
 							for index in indexSet {
 								let app = _filteredSignedApps[index]
-								// Delete on background thread to avoid UI lag for large apps
-								DispatchQueue.global(qos: .userInitiated).async {
-									Storage.shared.deleteApp(for: app)
-								}
+								Storage.shared.deleteApp(for: app)
 							}
 						}
 					}
@@ -130,9 +127,7 @@ struct LibraryView: View {
 						.onDelete { indexSet in
 							for index in indexSet {
 								let app = _filteredImportedApps[index]
-								DispatchQueue.global(qos: .userInitiated).async {
-									Storage.shared.deleteApp(for: app)
-								}
+								Storage.shared.deleteApp(for: app)
 							}
 						}
 					}
@@ -278,11 +273,8 @@ extension LibraryView {
 			return _selectedAppUUIDs.contains(uuid)
 		}
 		
-		// Delete on background thread to avoid UI lag for large apps
-		DispatchQueue.global(qos: .userInitiated).async {
-			for app in selectedApps {
-				Storage.shared.deleteApp(for: app)
-			}
+		for app in selectedApps {
+			Storage.shared.deleteApp(for: app)
 		}
 		
 		_selectedAppUUIDs.removeAll()

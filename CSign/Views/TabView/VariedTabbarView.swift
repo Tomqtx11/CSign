@@ -26,11 +26,16 @@ struct VariedTabbarView: View {
 			}
 		}
 		.onAppear {
-			// Delay slightly so it shows on top of other initial UI (like Disclaimer)
-			DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+			// Check periodically in case defaults take time, or just show if it's really empty
+			DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
 				if _certificates.isEmpty && !hasPromptedMissingCert {
 					_showMissingCertAlert = true
 				}
+			}
+		}
+		.onChange(of: _certificates.count) { _ in
+			if _certificates.isEmpty && !hasPromptedMissingCert {
+				_showMissingCertAlert = true
 			}
 		}
 		.alert("Chưa Có Chứng Chỉ", isPresented: $_showMissingCertAlert) {

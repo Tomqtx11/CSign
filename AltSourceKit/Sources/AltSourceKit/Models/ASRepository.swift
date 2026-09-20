@@ -54,10 +54,9 @@ public struct ASRepository: Sendable, Decodable, Hashable, Identifiable {
 			URL.self,
 			forKey: .iconURL
 		)
-		self.headerURL = try container.decodeIfPresent(
-			URL.self,
-			forKey: .headerURL
-		)
+		self.headerURL = try container.decodeIfPresent(URL.self, forKey: .headerURL)
+			?? (try container.decodeIfPresent(URL.self, forKey: .bannerURL))
+			?? (try container.decodeIfPresent(URL.self, forKey: .banner))
 		self.tintColor =
 			try container.decodeIfPresent(Color.self, forKey: .tintColor)
 
@@ -109,6 +108,8 @@ public struct ASRepository: Sendable, Decodable, Hashable, Identifiable {
 		     userInfo,
 		     iconURL,
 		     headerURL,
+		     bannerURL,
+		     banner,
 		     tintColor,
 		     apps,
 		     featuredApps,

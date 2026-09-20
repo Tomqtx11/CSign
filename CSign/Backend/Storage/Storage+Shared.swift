@@ -25,18 +25,17 @@ extension Storage {
 		let uuidDirectory = getUuidDirectory(for: app)
 		let appUUID = app.uuid
 		
+		// Update CoreData and metadata on main thread first so UI updates instantly
+		self.deleteSourceMetadata(for: appUUID)
+		if let object = app as? NSManagedObject {
+			self.context.delete(object)
+		}
+		self.saveContext()
+		
 		// Remove files on background thread to avoid UI freeze for large apps
 		DispatchQueue.global(qos: .userInitiated).async {
 			if let url = uuidDirectory {
 				try? FileManager.default.removeItem(at: url)
-			}
-			// Update CoreData and metadata on main thread
-			DispatchQueue.main.async {
-				self.deleteSourceMetadata(for: appUUID)
-				if let object = app as? NSManagedObject {
-					self.context.delete(object)
-				}
-				self.saveContext()
 			}
 		}
 	}

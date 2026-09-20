@@ -158,6 +158,8 @@ struct HistoryView: View {
                     downloadHistoryContent
                 }
             }
+            .searchable(text: $_searchText, placement: .platform())
+            .scrollDismissesKeyboard(.interactively)
             .toolbar {
                 if selectedTab == 0 {
                     ToolbarItem(placement: .topBarLeading) {
@@ -229,17 +231,9 @@ struct HistoryView: View {
 							}
                         )
                     }
-					.onDelete { indexSet in
-						for index in indexSet {
-							let app = _filteredSignedApps[index]
-							Storage.shared.deleteApp(for: app)
-						}
-					}
                 }
             }
         }
-        .searchable(text: $_searchText, placement: .platform())
-        .scrollDismissesKeyboard(.interactively)
     }
     
     var downloadHistoryContent: some View {

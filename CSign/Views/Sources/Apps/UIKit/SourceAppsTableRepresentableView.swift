@@ -57,6 +57,18 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 			{
 				var news = firstSource.repository.news ?? []
 				
+				if let headerURL = firstSource.repository.headerURL {
+					let repoBanner = ASRepository.News(
+						id: "repo-banner-\(firstSource.repository.id ?? UUID().uuidString)",
+						title: firstSource.repository.name ?? "",
+						caption: firstSource.repository.description ?? "",
+						tintColor: firstSource.repository.tintColor,
+						imageURL: headerURL,
+						url: firstSource.repository.website
+					)
+					news.insert(repoBanner, at: 0)
+				}
+				
 				if firstSource.repository.id == "kh.crysalis.csign-repo" || firstSource.repository.name?.localizedCaseInsensitiveContains("csign") == true {
 					let banner1 = ASRepository.News(
 						id: "csign-buy-cert-hardcoded",
