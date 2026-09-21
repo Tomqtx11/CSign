@@ -26,13 +26,18 @@ struct TabbarView: View {
 		}
 		.alert("Thiếu Chứng Chỉ", isPresented: $_showMissingCertAlert) {
 			Button("Nhập Ngay") {
-				selectedTab = .certificates
+				_showCertificatesSheet = true
 			}
 			Button("Để Sau", role: .cancel) { }
 		} message: {
 			Text("Bạn chưa có chứng chỉ nào để ký ứng dụng. Vui lòng nhập chứng chỉ (.p12 và .mobileprovision) để tiếp tục.")
 		}
+		.sheet(isPresented: $_showCertificatesSheet) {
+			NBNavigationView(.localized("Certificates")) { CertificatesView() }
+		}
 	}
+	
+	@State private var _showCertificatesSheet = false
 	
 	private func _checkCertificates() {
 		let certs = Storage.shared.getAllCertificates()
