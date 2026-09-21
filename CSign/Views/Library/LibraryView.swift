@@ -72,36 +72,6 @@ struct LibraryView: View {
 	var body: some View {
 		NBNavigationView(.localized("Library")) {
 			NBListAdaptable {
-				if !_filteredSignedApps.isEmpty {
-					NBSection(
-						.localized("Signed"),
-						secondary: _filteredSignedApps.count.description
-					) {
-						ForEach(_filteredSignedApps, id: \.uuid) { app in
-							LibraryCellView(
-								app: app,
-								selectedInfoAppPresenting: $_selectedInfoAppPresenting,
-								selectedSigningAppPresenting: $_selectedSigningAppPresenting,
-								selectedInstallAppPresenting: $_selectedInstallAppPresenting,
-								isSelected: _selectedAppUUIDs.contains(app.uuid ?? ""),
-								toggleSelection: {
-									guard let uuid = app.uuid else { return }
-									if _selectedAppUUIDs.contains(uuid) {
-										_selectedAppUUIDs.remove(uuid)
-									} else {
-										_selectedAppUUIDs.insert(uuid)
-									}
-								}
-							)
-						}
-						.onDelete { indexSet in
-							for index in indexSet {
-								let app = _filteredSignedApps[index]
-								Storage.shared.deleteApp(for: app)
-							}
-						}
-					}
-				}
 				if !_filteredImportedApps.isEmpty {
 					NBSection(
 						.localized("Imported"),
@@ -124,19 +94,13 @@ struct LibraryView: View {
 								}
 							)
 						}
-						.onDelete { indexSet in
-							for index in indexSet {
-								let app = _filteredImportedApps[index]
-								Storage.shared.deleteApp(for: app)
-							}
-						}
 					}
 				}
 			}
 			.searchable(text: $_searchText, placement: .platform())
 			.scrollDismissesKeyboard(.interactively)
 			.overlay {
-				if _filteredImportedApps.isEmpty && _filteredSignedApps.isEmpty {
+				if _filteredImportedApps.isEmpty {
 					if #available(iOS 17, *) {
 						ContentUnavailableView {
 							Label(.localized("No Apps"), systemImage: "questionmark.app.fill")
@@ -283,9 +247,8 @@ extension LibraryView {
 	}
 	
 	private func _getAllApps() -> [AppInfoPresentable] {
-		// Include both signed and imported apps for bulk operations
-		return _filteredSignedApps.map { $0 as AppInfoPresentable }
-			+ _filteredImportedApps.map { $0 as AppInfoPresentable }
+		// Include only imported apps for bulk operations in Library
+		return _filteredImportedApps.map { $0 as AppInfoPresentable }
 	}
 	
 	private func _checkForUpdates() async {

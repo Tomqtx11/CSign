@@ -226,7 +226,7 @@ final class SigningHandler: NSObject {
 		try checkCancelled()
 		LogCapture.shared.updateProgress(phase: .modifying, subProgress: 0.8)
 		
-		// MARK: - Signing Phase
+			// MARK: - Signing Phase
 		if
 			_options.signingOption == .default,
 			appCertificate != nil
@@ -235,13 +235,6 @@ final class SigningHandler: NSObject {
 			LogCapture.shared.printLog("🔐 Bắt đầu ký ứng dụng...")
 			LogCapture.shared.printLog("   ↳ Tính toán SHA hash cho tất cả file...")
 			LogCapture.shared.updateProgress(phase: .signing, subProgress: 0.05)
-			
-			// Inject provision profile into app bundle manually since zsign doesn't do it automatically
-			if let cert = appCertificate, let prov = Storage.shared.getFile(.provision, from: cert) {
-				let dest = movedAppPath.appendingPathComponent("embedded.mobileprovision")
-				try? _fileManager.removeItem(at: dest)
-				try? _fileManager.copyItem(at: prov, to: dest)
-			}
 			
 			try await handler.sign()
 			LogCapture.shared.updateProgress(phase: .signing, subProgress: 1.0)
@@ -530,12 +523,9 @@ extension SigningHandler {
 	}
 	
 	private func _removePresetFiles(for app: URL) async throws {
-		// IMPORTANT: Do NOT remove embedded.mobileprovision here.
-		// zsign needs the provision file to be present (or absent based on removeProvision option).
-		// Removing it before signing causes iOS to fail verification ("cannot be verified").
-		// zsign handles provision embedding via its removeProvision parameter.
 		var files = [
 			"_CodeSignature", // Fallback for some reason the locate doesnt work
+			"embedded.mobileprovision", // Remove this because zsign doesn't replace it
 			"com.apple.WatchPlaceholder", // Useless
 			"SignedByEsign" // Useless
 		].map {

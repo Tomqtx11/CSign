@@ -77,6 +77,23 @@ struct ExtendedTabbarView: View {
 			SourcesAddView()
 				.presentationDetents([.medium])
 		}
+		.onAppear {
+			_checkCertificates()
+		}
+		.alert("Thiếu Chứng Chỉ", isPresented: $_showMissingCertAlert) {
+			Button("Đóng", role: .cancel) { }
+		} message: {
+			Text("Bạn chưa có chứng chỉ nào để ký ứng dụng. Vui lòng chuyển đến tab Certificates để nhập chứng chỉ (.p12 và .mobileprovision).")
+		}
+	}
+	
+	@State private var _showMissingCertAlert = false
+	
+	private func _checkCertificates() {
+		let certs = Storage.shared.getAllCertificates()
+		if certs.isEmpty {
+			_showMissingCertAlert = true
+		}
 	}
 	
 	@ViewBuilder
