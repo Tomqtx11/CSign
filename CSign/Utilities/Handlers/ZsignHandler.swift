@@ -70,7 +70,7 @@ final class ZsignHandler {
                     customIdentifier: self._options.appIdentifier ?? "",
                     customName: self._options.appName ?? "",
                     customVersion: self._options.appVersion ?? "",
-                    removeProvision: self._options.removeProvisioning,
+                    removeProvision: !self._options.removeProvisioning,
                     completion: { _, error in
                         localErr = error
                     }
@@ -100,7 +100,7 @@ final class ZsignHandler {
                     customName: self._options.appName ?? "",
                     customVersion: self._options.appVersion ?? "",
                     adhoc: true,
-                    removeProvision: self._options.removeProvisioning,
+                    removeProvision: !self._options.removeProvisioning,
                     completion: { _, error in
                         localErr = error
                     }
