@@ -7,7 +7,7 @@
 
 import Foundation.NSURL
 import UIKit.UIImage
-import Zsign
+import ZsignSwift
 import NimbleJSON
 import AltSourceKit
 import IDeviceSwift

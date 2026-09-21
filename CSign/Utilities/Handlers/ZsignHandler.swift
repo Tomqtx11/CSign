@@ -1,6 +1,6 @@
 //
 //  ZsignHandler.swift
-//  CSign
+//  Feather
 //
 //  Created by samara on 17.04.2025.
 //
@@ -34,15 +34,15 @@ final class ZsignHandler {
 		let bundle = Bundle(url: _appUrl)
 		let execPath = _appUrl.appendingPathComponent(bundle?.exec ?? "").relativePath
 		
-        return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                if !Zsign.removeDylibs(appExecutable: execPath, using: self._options.disInjectionFiles) {
-                    continuation.resume(throwing: SigningFileHandlerError.disinjectFailed)
-                } else {
-                    continuation.resume(returning: ())
-                }
-            }
-        }
+		return try await withCheckedThrowingContinuation { continuation in
+			DispatchQueue.global(qos: .userInitiated).async {
+				if !Zsign.removeDylibs(appExecutable: execPath, using: self._options.disInjectionFiles) {
+					continuation.resume(throwing: SigningFileHandlerError.disinjectFailed)
+				} else {
+					continuation.resume(returning: ())
+				}
+			}
+		}
 	}
 	
 	func sign() async throws {
@@ -50,67 +50,42 @@ final class ZsignHandler {
 			throw SigningFileHandlerError.missingCertifcate
 		}
 
-        return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                LogCapture.shared.updateProgress(phase: .signing, subProgress: 0.1)
-                LogCapture.shared.printLog("   ↳ Khởi tạo chứng chỉ ký...")
-                
-                var localErr: Error? = nil
-                LogCapture.shared.updateProgress(phase: .signing, subProgress: 0.15)
-                LogCapture.shared.printLog("   ↳ Đang ký tất cả Mach-O binaries...")
-                
-                let startTime = CFAbsoluteTimeGetCurrent()
-                
-                let success = Zsign.sign(
-                    appPath: self._appUrl.relativePath,
-                    provisionPath: Storage.shared.getFile(.provision, from: cert)?.path ?? "",
-                    p12Path: Storage.shared.getFile(.certificate, from: cert)?.path ?? "",
-                    p12Password: cert.password ?? "",
-                    entitlementsPath: self._options.appEntitlementsFile?.path ?? "",
-                    customIdentifier: self._options.appIdentifier ?? "",
-                    customName: self._options.appName ?? "",
-                    customVersion: self._options.appVersion ?? "",
-                    removeProvision: self._options.removeProvisioning,
-                    completion: { _, error in
-                        localErr = error
-                    }
-                )
-                
-                let elapsed = CFAbsoluteTimeGetCurrent() - startTime
-                LogCapture.shared.printLog("   ↳ Thời gian ký: \(String(format: "%.1f", elapsed))s")
-                LogCapture.shared.updateProgress(phase: .signing, subProgress: 0.95)
-                
-                if !success {
-                    continuation.resume(throwing: localErr ?? SigningFileHandlerError.signFailed)
-                } else {
-                    continuation.resume(returning: ())
-                }
-            }
-        }
+		return try await withCheckedThrowingContinuation { continuation in
+			DispatchQueue.global(qos: .userInitiated).async {
+				let success = Zsign.sign(
+					appPath: self._appUrl.relativePath,
+					provisionPath: Storage.shared.getFile(.provision, from: cert)?.path ?? "",
+					p12Path: Storage.shared.getFile(.certificate, from: cert)?.path ?? "",
+					p12Password: cert.password ?? "",
+					entitlementsPath: self._options.appEntitlementsFile?.path ?? "",
+					removeProvision: !self._options.removeProvisioning,
+					completion: { _ in }
+				)
+				if !success {
+					continuation.resume(throwing: SigningFileHandlerError.signFailed)
+				} else {
+					continuation.resume(returning: ())
+				}
+			}
+		}
 	}
 	
 	func adhocSign() async throws {
-        return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                var localErr: Error? = nil
-                let success = Zsign.sign(
-                    appPath: self._appUrl.relativePath,
-                    entitlementsPath: self._options.appEntitlementsFile?.path ?? "",
-                    customIdentifier: self._options.appIdentifier ?? "",
-                    customName: self._options.appName ?? "",
-                    customVersion: self._options.appVersion ?? "",
-                    adhoc: true,
-                    removeProvision: self._options.removeProvisioning,
-                    completion: { _, error in
-                        localErr = error
-                    }
-                )
-                if !success {
-                    continuation.resume(throwing: localErr ?? SigningFileHandlerError.signFailed)
-                } else {
-                    continuation.resume(returning: ())
-                }
-            }
-        }
+		return try await withCheckedThrowingContinuation { continuation in
+			DispatchQueue.global(qos: .userInitiated).async {
+				let success = Zsign.sign(
+					appPath: self._appUrl.relativePath,
+					entitlementsPath: self._options.appEntitlementsFile?.path ?? "",
+					adhoc: true,
+					removeProvision: !self._options.removeProvisioning,
+					completion: { _ in }
+				)
+				if !success {
+					continuation.resume(throwing: SigningFileHandlerError.signFailed)
+				} else {
+					continuation.resume(returning: ())
+				}
+			}
+		}
 	}
 }

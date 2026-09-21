@@ -4,16 +4,18 @@
 #include "macho.h"
 #include "sys/stat.h"
 #include "sys/types.h"
-#ifdef __APPLE__
-#include <dispatch/dispatch.h>
-#endif
 
 ZBundle::ZBundle()
 {
+	m_pSignAssets = NULL;
 	m_pSignAsset = NULL;
 	m_bForceSign = false;
 	m_bWeakInject = false;
-	signFailedFiles = "";
+	m_bRemoveProvision = false;
+	m_bEnableDocuments = false;
+	m_bRemoveExtensions = false;
+	m_bRemoveWatchApp = false;
+	m_bRemoveUISupportedDevices = false;
 }
 
 bool ZBundle::FindAppFolder(const string& strFolder, string& strAppFolder)
@@ -119,7 +121,29 @@ bool ZBundle::GetObjectsToSign(const string& strFolder, jvalue& jvInfo)
 	}
 	
 	ZFile::EnumFolder(strFolder.c_str(), true, NULL, [&](bool bFolder, const string& strPath) {
-		if (!bFolder && ZFile::IsPathSuffix(strPath, ".dylib")) {
+		if (bFolder || string::npos != strPath.find(".dSYM") ||
+			string::npos != strPath.find("_WatchKitStub")) {
+			return false;
+		}
+		bool bMachO = false;
+		{
+			FILE* fp = NULL;
+#ifdef _WIN32
+			fopen_s(&fp, strPath.c_str(), "rb");
+#else
+			fp = fopen(strPath.c_str(), "rb");
+#endif
+			if (fp) {
+				uint32_t magic = 0;
+				if (1 == fread(&magic, sizeof(magic), 1, fp)) {
+					bMachO = (magic == MH_MAGIC || magic == MH_CIGAM ||
+							  magic == MH_MAGIC_64 || magic == MH_CIGAM_64 ||
+							  magic == FAT_MAGIC || magic == FAT_CIGAM);
+				}
+				fclose(fp);
+			}
+		}
+		if (bMachO) {
 			jvInfo["files"].push_back(strPath.substr(m_strAppFolder.size() + 1));
 		}
 		return false;
@@ -156,32 +180,18 @@ bool ZBundle::GenerateCodeResources(const string& strFolder, jvalue& jvCodeRes)
 	jvCodeRes["files"] = jvalue(jvalue::E_OBJECT);
 	jvCodeRes["files2"] = jvalue(jvalue::E_OBJECT);
 
-    vector<string> filesVector(setFiles.begin(), setFiles.end());
-    struct HashResult {
-        string strSHA1Base64;
-        string strSHA256Base64;
-    };
-    vector<HashResult> hashResults(filesVector.size());
+	for (string strKey : setFiles) {
+		if (m_bRemoveProvision && strKey == "embedded.mobileprovision") {
+			string strProvFile = strFolder + "/embedded.mobileprovision";
+			remove(strProvFile.c_str());
+			ZLog::Print(">>> Removed embedded.mobileprovision\n");
+			continue;
+		}
 
-#ifdef __APPLE__
-    dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
-    HashResult* pHashResults = hashResults.data();
-    const string* pFilesVector = filesVector.data();
-    dispatch_apply(filesVector.size(), queue, ^(size_t i) {
-        string strFile = strFolder + "/" + pFilesVector[i];
-        ZSHA::SHABase64File(strFile.c_str(), pHashResults[i].strSHA1Base64, pHashResults[i].strSHA256Base64);
-    });
-#else
-    for (size_t i = 0; i < filesVector.size(); ++i) {
-        string strFile = strFolder + "/" + filesVector[i];
-        ZSHA::SHABase64File(strFile.c_str(), hashResults[i].strSHA1Base64, hashResults[i].strSHA256Base64);
-    }
-#endif
-
-	for (size_t i = 0; i < filesVector.size(); ++i) {
-		string strKey = filesVector[i];
-		string strSHA1Base64 = hashResults[i].strSHA1Base64;
-		string strSHA256Base64 = hashResults[i].strSHA256Base64;
+		string strFile = strFolder + "/" + strKey;
+		string strSHA1Base64;
+		string strSHA256Base64;
+		ZSHA::SHABase64File(strFile.c_str(), strSHA1Base64, strSHA256Base64);
 
 #ifdef _WIN32
 		strKey = ic.A2U8(strKey);
@@ -277,7 +287,7 @@ void ZBundle::GetNodeChangedFiles(jvalue& jvNode, bool excludeProvisioning)
 		jvNode["changed"].push_back(arrChangedFiles[i]);
 	}
 	
-	if (!excludeProvisioning) {
+	if (excludeProvisioning) {
 		if ("/" == jvNode["path"]) { // root
 			jvNode["changed"].push_back("embedded.mobileprovision");
 		}
@@ -292,15 +302,9 @@ bool ZBundle::SignNode(jvalue& jvNode)
 			ZLog::PrintV(">>> SignFile: \t%s\n", strFile.c_str());
 			ZMachO macho;
 			if (macho.InitV("%s/%s", m_strAppFolder.c_str(), strFile.c_str())) {
-				if (!macho.Sign(m_pSignAsset, m_bForceSign, "", "", "", "")) {
-					signFailedFiles += strFile;
-					signFailedFiles += "\n";
-//					return false;
-				}
+				macho.Sign(m_pSignAsset, m_bForceSign, "", "", "", "");
 			} else {
-				signFailedFiles += strFile;
-				signFailedFiles += "\n";
-//				return false;
+				ZLog::WarnV(">>> Warning: Skipping non-Mach-O file: \t%s\n", strFile.c_str());
 			}
 		}
 	}
@@ -344,21 +348,42 @@ bool ZBundle::SignNode(jvalue& jvNode)
 	ZMachO macho;
 	if (!macho.Init(strExePath.c_str())) {
 		ZLog::ErrorV(">>> Can't parse BundleExecute file! %s\n", strExePath.c_str());
-		signFailedFiles += strExePath;
-		signFailedFiles += "\n";
-//		return false;
+#if !TARGET_OS_IOS
+		return false;
+#else
 		return true;
+#endif
+	}
+
+	bool bForceSign = m_bForceSign;
+	if ("/" == strFolder) { // inject/remove dylib before CodeResources generation
+		for (const string& strDylibFile : m_arrInjectDylibs) {
+			if (macho.InjectDylib(m_bWeakInject, strDylibFile.c_str())) {
+				bForceSign = true;
+			}
+		}
+		if (!m_setRemoveDylibs.empty()) {
+			macho.RemoveDylibs(m_setRemoveDylibs);
+			for (const string& name : m_setRemoveDylibs) {
+				string baseName = name;
+				if (baseName.find("@executable_path/") == 0) {
+					baseName = baseName.substr(17);
+				}
+				ZFile::RemoveFileV("%s/%s", m_strAppFolder.c_str(), baseName.c_str());
+			}
+			bForceSign = true;
+		}
 	}
 
 	ZFile::CreateFolderV("%s/_CodeSignature", strBaseFolder.c_str());
 	string strCodeResFile = strBaseFolder + "/_CodeSignature/CodeResources";
 
 	jvalue jvCodeRes;
-	if (!m_bForceSign) {
+	if (!bForceSign) {
 		jvCodeRes.read_plist_from_file(strCodeResFile.c_str());
 	}
 
-	if (m_bForceSign || jvCodeRes.is_null()) { // create
+	if (bForceSign || jvCodeRes.is_null()) { // create
 		if (!GenerateCodeResources(strBaseFolder, jvCodeRes)) {
 			ZLog::ErrorV(">>> Create CodeResources failed! %s\n", strBaseFolder.c_str());
 			return false;
@@ -395,11 +420,36 @@ bool ZBundle::SignNode(jvalue& jvNode)
 		return false;
 	}
 
-	bool bForceSign = m_bForceSign;
-	if ("/" == strFolder) { // inject dylib
-		for (const string& strDylibFile : m_arrInjectDylibs) {
-			if (macho.InjectDylib(m_bWeakInject, strDylibFile.c_str())) {
-				bForceSign = true;
+	if (m_pSignAssets) {
+		auto endsWith = [](const string& str, const string& suffix) {
+			return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
+		};
+
+		for (auto it = m_pSignAssets->rbegin(); it != m_pSignAssets->rend(); ++it) {
+			m_pSignAsset = &(*it);
+			if (endsWith(m_pSignAsset->m_strApplicationId, strBundleId)) {
+				if (!ZFile::WriteFileV(m_pSignAsset->m_strProvData, "%s/%s/embedded.mobileprovision", m_strAppFolder.c_str(), strFolder.c_str())) {
+					ZLog::ErrorV(">>> Can't write embedded.mobileprovision!\n");
+					return false;
+				}
+				break;
+			}
+		}
+	}
+
+	if (m_pSignAssets) {
+		auto endsWith = [](const string& str, const string& suffix) {
+			return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
+		};
+
+		for (auto it = m_pSignAssets->rbegin(); it != m_pSignAssets->rend(); ++it) {
+			m_pSignAsset = &(*it);
+			if (endsWith(m_pSignAsset->m_strApplicationId, strBundleId)) {
+				if (!ZFile::WriteFileV(m_pSignAsset->m_strProvData, "%s/%s/embedded.mobileprovision", m_strAppFolder.c_str(), strFolder.c_str())) {
+					ZLog::ErrorV(">>> Can't write embedded.mobileprovision!\n");
+					return false;
+				}
+				break;
 			}
 		}
 	}
@@ -527,20 +577,89 @@ bool ZBundle::ModifyBundleInfo(const string& strBundleId, const string& strBundl
 	return true;
 }
 
+void ZBundle::ApplyAppModifications()
+{
+
+	if (m_bEnableDocuments) {
+		jvalue jvInfo;
+		jvInfo.read_plist_from_file("%s/Info.plist", m_strAppFolder.c_str());
+		jvInfo["UISupportsDocumentBrowser"] = true;
+		jvInfo["UIFileSharingEnabled"] = true;
+		jvInfo.style_write_plist_to_file("%s/Info.plist", m_strAppFolder.c_str());
+		m_bForceSign = true;
+		ZLog::Print(">>> Enabled documents support\n");
+	}
+
+	if (!m_strMinVersion.empty()) {
+		jvalue jvInfo;
+		jvInfo.read_plist_from_file("%s/Info.plist", m_strAppFolder.c_str());
+		string strOldVersion = jvInfo["MinimumOSVersion"];
+		jvInfo["MinimumOSVersion"] = m_strMinVersion;
+		jvInfo.style_write_plist_to_file("%s/Info.plist", m_strAppFolder.c_str());
+		m_bForceSign = true;
+		ZLog::PrintV(">>> MinimumOSVersion: %s -> %s\n", strOldVersion.c_str(), m_strMinVersion.c_str());
+	}
+
+	if (m_bRemoveExtensions) {
+		const char* extDirs[] = {"PlugIns", "Extensions"};
+		for (const char* dir : extDirs) {
+			string strPath = m_strAppFolder + "/" + dir;
+			if (ZFile::IsFolder(strPath.c_str())) {
+				ZFile::RemoveFolder(strPath.c_str());
+				ZLog::PrintV(">>> Removed %s\n", dir);
+				m_bForceSign = true;
+			}
+		}
+	}
+
+	if (m_bRemoveWatchApp) {
+		const char* watchDirs[] = {"Watch", "WatchKit", "com.apple.WatchPlaceholder"};
+		for (const char* dir : watchDirs) {
+			string strPath = m_strAppFolder + "/" + dir;
+			if (ZFile::IsFolder(strPath.c_str())) {
+				ZFile::RemoveFolder(strPath.c_str());
+				ZLog::PrintV(">>> Removed %s\n", dir);
+				m_bForceSign = true;
+			}
+		}
+	}
+
+	if (m_bRemoveUISupportedDevices) {
+		jvalue jvInfo;
+		jvInfo.read_plist_from_file("%s/Info.plist", m_strAppFolder.c_str());
+		if (jvInfo.has("UISupportedDevices")) {
+			jvInfo.erase("UISupportedDevices");
+			jvInfo.style_write_plist_to_file("%s/Info.plist", m_strAppFolder.c_str());
+			m_bForceSign = true;
+			ZLog::Print(">>> Removed UISupportedDevices\n");
+		}
+	}
+}
+
 bool ZBundle::SignFolder(ZSignAsset* pSignAsset,
 							const string& strFolder,
 							const string& strBundleId,
 							const string& strBundleVersion,
 							const string& strDisplayName,
 							const vector<string>& arrInjectDylibs,
+							const vector<string>& arrRemoveDylibNames,
 							bool bForce,
 							bool bWeakInject,
 							bool bEnableCache,
-							bool excludeProvisioning)
+							bool bRemoveProvision)
 {
 	m_bForceSign = bForce;
 	m_pSignAsset = pSignAsset;
 	m_bWeakInject = bWeakInject;
+	m_bRemoveProvision = bRemoveProvision;
+	m_setRemoveDylibs.clear();
+	for (const string& name : arrRemoveDylibNames) {
+		if (name.find('/') != string::npos) {
+			m_setRemoveDylibs.insert(name);
+		} else {
+			m_setRemoveDylibs.insert("@executable_path/" + name);
+		}
+	}
 	if (NULL == m_pSignAsset) {
 		return false;
 	}
@@ -549,6 +668,8 @@ bool ZBundle::SignFolder(ZSignAsset* pSignAsset,
 		ZLog::ErrorV(">>> Can't find app folder! %s\n", strFolder.c_str());
 		return false;
 	}
+
+	ApplyAppModifications();
 
 	if (!strBundleId.empty() || !strDisplayName.empty() || !strBundleVersion.empty()) {
 		m_bForceSign = true;
@@ -559,7 +680,7 @@ bool ZBundle::SignFolder(ZSignAsset* pSignAsset,
 
 	ZFile::RemoveFileV("%s/embedded.mobileprovision", m_strAppFolder.c_str());
 	if (!pSignAsset->m_strProvData.empty()) {
-		if (!excludeProvisioning) {
+		if (bRemoveProvision) {
 			if (!ZFile::WriteFileV(pSignAsset->m_strProvData, "%s/embedded.mobileprovision", m_strAppFolder.c_str())) { // embedded.mobileprovision
 				ZLog::ErrorV(">>> Can't write embedded.mobileprovision!\n");
 				return false;
@@ -594,7 +715,7 @@ bool ZBundle::SignFolder(ZSignAsset* pSignAsset,
 		if (!GetObjectsToSign(m_strAppFolder, jvRoot)) {
 			return false;
 		}
-		GetNodeChangedFiles(jvRoot, excludeProvisioning);
+		GetNodeChangedFiles(jvRoot, bRemoveProvision);
 	} else {
 		jvRoot.read_from_file("./.zsign_cache/%s.json", strCacheName.c_str());
 	}
@@ -613,7 +734,7 @@ bool ZBundle::SignFolder(ZSignAsset* pSignAsset,
 	ZLog::PrintV(">>> TeamId: \t%s\n", m_pSignAsset->m_strTeamId.c_str());
 	ZLog::PrintV(">>> SubjectCN: \t%s\n", m_pSignAsset->m_strSubjectCN.c_str());
 	ZLog::PrintV(">>> ReadCache: \t%s\n", m_bForceSign ? "NO" : "YES");
-	ZLog::PrintV(">>> Exclude MobileProvision: \t%s\n", excludeProvisioning ? "NO" : "YES");
+	ZLog::PrintV(">>> Exclude MobileProvision: \t%s\n", bRemoveProvision ? "NO" : "YES");
 
 	if (SignNode(jvRoot)) {
 		if (bEnableCache) {
@@ -624,4 +745,20 @@ bool ZBundle::SignFolder(ZSignAsset* pSignAsset,
 	}
 
 	return false;
+}
+
+bool ZBundle::SignFolder(list<ZSignAsset>* pSignAssets,
+						const string& strFolder,
+						const string& strBundleId,
+						const string& strBundleVersion,
+						const string& strDisplayName,
+						const vector<string>& arrInjectDylibs,
+						const vector<string>& arrRemoveDylibNames,
+						bool bForce,
+						bool bWeakInject,
+						bool bEnableCache,
+						bool bRemoveProvision)
+{
+	m_pSignAssets = pSignAssets;
+	return SignFolder(&m_pSignAssets->front(), strFolder, strBundleId, strBundleVersion, strDisplayName, arrInjectDylibs, arrRemoveDylibNames, bForce, bWeakInject, bEnableCache, bRemoveProvision);
 }

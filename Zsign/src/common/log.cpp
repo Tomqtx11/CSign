@@ -1,7 +1,7 @@
 #include "log.h"
 
 
-int ZLog::g_nLogLevel = ZLog::E_NONE;
+int ZLog::g_nLogLevel = ZLog::E_INFO;
 
 void ZLog::_Print(const char* szLog, int nColor)
 {
