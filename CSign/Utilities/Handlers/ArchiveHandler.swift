@@ -57,24 +57,22 @@ final class ArchiveHandler: NSObject {
         
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    try Zip.zipFiles(
-                        paths: [pUrl],
-                        zipFilePath: zipUrl,
-                        password: nil,
-                        compression: compression,
-                        progress: { progress in
-                            let currentTime = CFAbsoluteTimeGetCurrent()
-                            if progress == 1.0 || (currentTime - self._lastProgressTime > 0.05) {
-                                self._lastProgressTime = currentTime
-                                Task { @MainActor in
-                                    self.viewModel.packageProgress = progress
-                                }
-                            }
-                        })
-                    try FileManager.default.moveItem(at: zipUrl, to: ipaUrl)
-                    continuation.resume(returning: ipaUrl)
-                } catch {
+                var coordinatorError: NSError?
+                NSFileCoordinator().coordinate(readingItemAt: pUrl, options: [.forUploading], error: &coordinatorError) { zippedUrl in
+                    do {
+                        try FileManager.default.moveItem(at: zippedUrl, to: ipaUrl)
+                        
+                        Task { @MainActor in
+                            self.viewModel.packageProgress = 1.0
+                        }
+                        
+                        continuation.resume(returning: ipaUrl)
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
+                }
+                
+                if let error = coordinatorError {
                     continuation.resume(throwing: error)
                 }
             }

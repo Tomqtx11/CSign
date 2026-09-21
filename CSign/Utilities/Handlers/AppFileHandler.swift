@@ -86,6 +86,16 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 					)
 					
 					self.uniqueWorkDirPayload = self._uniqueWorkDir.appendingPathComponent("Payload")
+					
+					// FIX: Thư viện Zip làm mất quyền thực thi, ta phải cấp lại quyền 755 cho toàn bộ file
+					if let payloadUrl = self.uniqueWorkDirPayload {
+						if let enumerator = FileManager.default.enumerator(at: payloadUrl, includingPropertiesForKeys: nil) {
+							for case let fileURL as URL in enumerator {
+								try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fileURL.path)
+							}
+						}
+					}
+					
 					continuation.resume()
 				} catch {
 					continuation.resume(throwing: error)
