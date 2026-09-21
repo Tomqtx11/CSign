@@ -15,7 +15,7 @@ struct VariedTabbarView: View {
 	
 	@State private var _showMissingCertAlert = false
 	@State private var _showCertificatesModal = false
-	@AppStorage("hasPromptedMissingCert") private var hasPromptedMissingCert = false
+	@State private var hasPromptedMissingCert = false
 
 	var body: some View {
 		Group {
@@ -44,7 +44,9 @@ struct VariedTabbarView: View {
 			}
 			Button("Nhập Ngay") {
 				hasPromptedMissingCert = true
-				_showCertificatesModal = true
+				DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+					_showCertificatesModal = true
+				}
 			}
 		} message: {
 			Text("Bạn cần thêm ít nhất một chứng chỉ (Certificate) trước khi có thể ký ứng dụng. Vui lòng nhập chứng chỉ ngay.")

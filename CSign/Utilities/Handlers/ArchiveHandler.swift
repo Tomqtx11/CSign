@@ -53,7 +53,7 @@ final class ArchiveHandler: NSObject {
         }
         let zipUrl = self._uniqueWorkDir.appendingPathComponent("Archive.zip")
         let ipaUrl = self._uniqueWorkDir.appendingPathComponent("Archive.ipa")
-        let compression = forceNoCompression ? ZipCompression.NoCompression : ZipCompression.allCases[ArchiveHandler.getCompressionLevel()]
+        let compression = forceNoCompression ? ZipCompression.NoCompression : (ZipCompression(rawValue: ArchiveHandler.getCompressionLevel()) ?? .DefaultCompression)
         
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
@@ -101,7 +101,7 @@ final class ArchiveHandler: NSObject {
 	
 	static func getCompressionLevel() -> Int {
 		if UserDefaults.standard.object(forKey: "CSign.compressionLevel") == nil {
-			return 0 // Default to NoCompression for speed
+			return 2 // Default to DefaultCompression instead of NoCompression
 		}
 		return UserDefaults.standard.integer(forKey: "CSign.compressionLevel")
 	}

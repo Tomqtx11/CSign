@@ -11,7 +11,7 @@ import NimbleViews
 
 // MARK: - View
 struct ArchiveView: View {
-	@AppStorage("CSign.compressionLevel") private var _compressionLevel: Int = ZipCompression.NoCompression.rawValue
+	@AppStorage("CSign.compressionLevel") private var _compressionLevel: Int = ZipCompression.DefaultCompression.rawValue
 	@AppStorage("CSign.useShareSheetForArchiving") private var _useShareSheet: Bool = false
 	
 	// MARK: Body
