@@ -78,17 +78,8 @@ struct ExtendedTabbarView: View {
 			SourcesAddView()
 				.presentationDetents([.medium])
 		}
-		.onAppear {
-		}
 	}
 	
-	
-		let certs = Storage.shared.getAllCertificates()
-		if certs.isEmpty {
-			_showMissingCertAlert = true
-			hasShownInitialCertAlert = true
-		}
-	}
 	
 	@ViewBuilder
 	private func _icon(_ title: String, iconUrl: URL?) -> some View {
