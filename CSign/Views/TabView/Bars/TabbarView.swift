@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import NimbleViews
 
 struct TabbarView: View {
 	@State private var selectedTab: TabEnum = .sources

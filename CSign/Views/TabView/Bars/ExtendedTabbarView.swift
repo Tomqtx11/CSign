@@ -8,6 +8,7 @@
 
 import SwiftUI
 import NukeUI
+import NimbleViews
 
 @available(iOS 18, *)
 struct ExtendedTabbarView: View {
