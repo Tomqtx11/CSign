@@ -407,17 +407,3 @@ int checkCert(
 
 
 }
-
-bool ZsignUnzip(NSString *zipFile, NSString *outputFolder) {
-    if (!zipFile || !outputFolder) return false;
-    std::string strZip = [zipFile cStringUsingEncoding:NSUTF8StringEncoding];
-    std::string strOut = [outputFolder cStringUsingEncoding:NSUTF8StringEncoding];
-    return Zip::Extract(strZip.c_str(), strOut.c_str());
-}
-
-bool ZsignZip(NSString *folder, NSString *zipFile, int level) {
-    if (!folder || !zipFile) return false;
-    std::string strFolder = [folder cStringUsingEncoding:NSUTF8StringEncoding];
-    std::string strZip = [zipFile cStringUsingEncoding:NSUTF8StringEncoding];
-    return Zip::Archive(strFolder, strZip, level);
-}

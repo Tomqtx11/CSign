@@ -42,9 +42,6 @@ int checkCert(
 	void(^completionHandler)(int status, NSDate* expirationDate, NSString *error)
 );
 
-bool ZsignUnzip(NSString *zipFile, NSString *outputFolder);
-bool ZsignZip(NSString *folder, NSString *zipFile, int level);
-
 #ifdef __cplusplus
 }
 #endif
