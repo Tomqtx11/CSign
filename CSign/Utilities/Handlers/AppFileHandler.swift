@@ -60,45 +60,23 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 		
 		try await withCheckedThrowingContinuation { continuation in
 			DispatchQueue.global(qos: .utility).async {
-				do {
-					try Zip.unzipFile(
-						self._ipa,
-						destination: self._uniqueWorkDir,
-						overwrite: true,
-						password: nil,
-						progress: { progress in
-							if let download = download {
-								let currentTime = CFAbsoluteTimeGetCurrent()
-								if progress == 1.0 || (currentTime - self._lastProgressTime > 0.05) {
-									self._lastProgressTime = currentTime
-									DispatchQueue.main.async {
-										download.unpackageProgress = progress
-										
-										#if !targetEnvironment(macCatalyst)
-										if #available(iOS 26.0, *) {
-											BackgroundTaskManager.shared.updateProgress(for: download.id, progress: download.overallProgress)
-										}
-										#endif
-									}
-								}
+				let success = Zsign.unzip(zipFile: self._ipa.path, outputFolder: self._uniqueWorkDir.path)
+				
+				if success {
+					if let download = download {
+						DispatchQueue.main.async {
+							download.unpackageProgress = 1.0
+							#if !targetEnvironment(macCatalyst)
+							if #available(iOS 26.0, *) {
+								BackgroundTaskManager.shared.updateProgress(for: download.id, progress: download.overallProgress)
 							}
-						}
-					)
-					
-					self.uniqueWorkDirPayload = self._uniqueWorkDir.appendingPathComponent("Payload")
-					
-					// FIX: Thư viện Zip làm mất quyền thực thi, ta phải cấp lại quyền 755 cho toàn bộ file
-					if let payloadUrl = self.uniqueWorkDirPayload {
-						if let enumerator = FileManager.default.enumerator(at: payloadUrl, includingPropertiesForKeys: nil) {
-							for case let fileURL as URL in enumerator {
-								try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fileURL.path)
-							}
+							#endif
 						}
 					}
-					
+					self.uniqueWorkDirPayload = self._uniqueWorkDir.appendingPathComponent("Payload")
 					continuation.resume()
-				} catch {
-					continuation.resume(throwing: error)
+				} else {
+					continuation.resume(throwing: ImportedFileHandlerError.unzipFailed)
 				}
 			}
 		}

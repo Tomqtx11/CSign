@@ -113,4 +113,14 @@ public enum Zsign {
 			completionHandler(status, expirationDate, error)
 		}
 	}
+	
+	/// Unzips a file using Zsign's built-in minizip (preserves symlinks and permissions)
+	static public func unzip(zipFile: String, outputFolder: String) -> Bool {
+		return ZsignUnzip(zipFile, outputFolder)
+	}
+	
+	/// Zips a folder using Zsign's built-in minizip
+	static public func archive(folder: String, zipFile: String, level: Int = 1) -> Bool {
+		return ZsignZip(folder, zipFile, Int32(level))
+	}
 }

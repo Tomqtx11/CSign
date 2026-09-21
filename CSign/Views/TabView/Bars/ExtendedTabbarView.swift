@@ -83,7 +83,9 @@ struct ExtendedTabbarView: View {
 		}
 		.alert("Thiếu Chứng Chỉ", isPresented: $_showMissingCertAlert) {
 			Button("Nhập Ngay") {
-				_showCertificatesSheet = true
+				DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+					_showCertificatesSheet = true
+				}
 			}
 			Button("Để Sau", role: .cancel) { }
 		} message: {
@@ -96,11 +98,14 @@ struct ExtendedTabbarView: View {
 	
 	@State private var _showMissingCertAlert = false
 	@State private var _showCertificatesSheet = false
+	@AppStorage("hasShownInitialCertAlert") private var hasShownInitialCertAlert = false
 	
 	private func _checkCertificates() {
+		if hasShownInitialCertAlert { return }
 		let certs = Storage.shared.getAllCertificates()
 		if certs.isEmpty {
 			_showMissingCertAlert = true
+			hasShownInitialCertAlert = true
 		}
 	}
 	
