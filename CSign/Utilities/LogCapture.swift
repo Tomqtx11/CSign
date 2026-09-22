@@ -109,6 +109,18 @@ final class LogCapture: ObservableObject {
 		}
 	}
 	
+	nonisolated func updateLastLog(_ message: String) {
+		Task { @MainActor in
+			var lines = logs.components(separatedBy: "\n")
+			if !lines.isEmpty {
+				lines.removeLast()
+			}
+			let newLog = "[\(Date().formatted(date: .omitted, time: .standard))] \(message)"
+			lines.append(newLog)
+			logs = lines.joined(separator: "\n")
+		}
+	}
+	
 	func stop() {
 		isCapturing = false
 		if !isCancelled {
