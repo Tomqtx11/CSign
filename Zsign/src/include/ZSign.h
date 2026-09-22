@@ -8,7 +8,7 @@
 #ifndef ZSign_h
 #define ZSign_h
 
-#include "../../swift/zsign.hpp"
-#include "../../swift/utils.hpp"
+#include "zsign.hpp"
+#include "utils.hpp"
 
 #endif /* ZSign_h */

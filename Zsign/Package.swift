@@ -56,6 +56,7 @@ let package = Package(
 			cxxSettings: [
 				.headerSearchPath("src"),
 				.headerSearchPath("src/common"),
+				.headerSearchPath("src/include"),
 				.unsafeFlags(["-std=c++17"])
 			],
 			linkerSettings: [
