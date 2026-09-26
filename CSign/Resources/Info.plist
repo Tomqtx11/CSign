@@ -2,145 +2,103 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>$(PRODUCT_BUNDLE_IDENTIFIER).userTask.*</string>
-	</array>
-	<key>CFBundleDocumentTypes</key>
-	<array>
+	<key>CFBundleDisplayName</key>
+	<string>CSign</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.csign.app</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>UISupportsDocumentBrowser</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>csign_extension</string>
-			<key>CFBundleTypeName</key>
-			<string>iOS Package Archive</string>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>LSHandlerRank</key>
-			<string>Owner</string>
-			<key>LSItemContentTypes</key>
+			<key>UIWindowSceneSessionRoleApplication</key>
 			<array>
-				<string>thewonderofyou.CSign.ipa</string>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+				</dict>
 			</array>
 		</dict>
-		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>csign_extension</string>
-			<key>CFBundleTypeName</key>
-			<string>AirDrop friendly iOS app</string>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>LSHandlerRank</key>
-			<string>Alternate</string>
-			<key>LSItemContentTypes</key>
-			<array>
-				<string>thewonderofyou.CSign.tipa</string>
-			</array>
-		</dict>
+	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
 	</array>
-
+	<key>UILaunchStoryboardName</key>
+	<string></string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLIconFile</key>
-			<string>csign_extension</string>
 			<key>CFBundleURLName</key>
-			<string>thewonderofyou.CSign</string>
+			<string>com.csign.app</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>csign</string>
 			</array>
 		</dict>
 	</array>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>localdevvpn</string>
-	</array>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSExceptionDomains</key>
-		<dict>
-			<key>claration.dev</key>
-			<dict>
-				<key>NSIncludesSubdomains</key>
-				<true/>
-				<key>NSTemporaryExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-			</dict>
-		</dict>
-	</dict>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>audio</string>
-	</array>
-	<key>UIFileSharingEnabled</key>
-	<true/>
-	<key>UILaunchScreen</key>
-	<false/>
-	<key>UTExportedTypeDeclarations</key>
+	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
-			<key>UTTypeConformsTo</key>
+			<key>CFBundleTypeName</key>
+			<string>IPA File</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
 			<array>
 				<string>com.apple.itunes.ipa</string>
-				<string>public.data</string>
-				<string>public.content</string>
 			</array>
-			<key>UTTypeDescription</key>
-			<string>iOS Package Archive</string>
-			<key>UTTypeIconFile</key>
-			<string>csign_extension</string>
-			<key>UTTypeIcons</key>
-			<dict>
-				<key>UTTypeIconText</key>
-				<string>IPA</string>
-			</dict>
-			<key>UTTypeIdentifier</key>
-			<string>thewonderofyou.CSign.ipa</string>
-			<key>UTTypeTagSpecification</key>
-			<dict>
-				<key>public.filename-extension</key>
-				<array>
-					<string>ipa</string>
-				</array>
-				<key>public.mime-type</key>
-				<array>
-					<string>application/octet-stream</string>
-				</array>
-			</dict>
 		</dict>
 		<dict>
-			<key>UTTypeConformsTo</key>
+			<key>CFBundleTypeName</key>
+			<string>Certificate</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
 			<array>
-				<string>com.apple.itunes.ipa</string>
-				<string>public.data</string>
-				<string>public.content</string>
+				<string>com.rsa.pkcs-12</string>
 			</array>
-			<key>UTTypeDescription</key>
-			<string>AirDrop friendly iOS app</string>
-			<key>UTTypeIconFile</key>
-			<string>csign_extension</string>
-			<key>UTTypeIcons</key>
-			<dict>
-				<key>UTTypeIconBadgeName</key>
-				<string></string>
-				<key>UTTypeIconText</key>
-				<string>TIPA</string>
-			</dict>
-			<key>UTTypeIdentifier</key>
-			<string>thewonderofyou.CSign.tipa</string>
-			<key>UTTypeTagSpecification</key>
-			<dict>
-				<key>public.filename-extension</key>
-				<array>
-					<string>tipa</string>
-				</array>
-				<key>public.mime-type</key>
-				<array>
-					<string>application/trollstore-ipa</string>
-				</array>
-			</dict>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Provisioning Profile</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.apple.mobileprovision</string>
+			</array>
 		</dict>
 	</array>
 </dict>
