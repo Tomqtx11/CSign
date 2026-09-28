@@ -126,28 +126,6 @@ struct SigningLogView: View {
 			
 			Divider()
 			
-			// MARK: - Console Logs (scrollable)
-			ScrollViewReader { proxy in
-				ScrollView {
-					LazyVStack(alignment: .leading, spacing: 2) {
-						ForEach(Array(logCapture.logs.components(separatedBy: "\n").enumerated()), id: \.offset) { index, line in
-							Text(line)
-								.font(.system(.caption2, design: .monospaced))
-								.foregroundColor(logLineColor(for: line))
-								.frame(maxWidth: .infinity, alignment: .leading)
-								.id(index)
-						}
-					}
-					.padding(10)
-				}
-				.background(Color(.secondarySystemBackground))
-				.onChange(of: logCapture.logs) { _ in
-					let lineCount = logCapture.logs.components(separatedBy: "\n").count - 1
-					withAnimation(.easeOut(duration: 0.1)) {
-						proxy.scrollTo(lineCount, anchor: .bottom)
-					}
-				}
-			}
 		}
 		.onChange(of: logCapture.isCapturing) { isCapturing in
 			if !isCapturing && error == nil && !logCapture.isCancelled {
@@ -182,21 +160,6 @@ struct SigningLogView: View {
 		return .primary
 	}
 	
-	private func logLineColor(for line: String) -> Color {
-		if line.contains("❌") || line.contains("Lỗi") || line.contains("Error") || line.contains("Failed") {
-			return .red
-		}
-		if line.contains("✅") || line.contains("thành công") || line.contains("Hoàn tất") {
-			return .green
-		}
-		if line.contains("⛔️") || line.contains("Huỷ") {
-			return .orange
-		}
-		if line.contains("⚠️") || line.contains("Warning") {
-			return .yellow
-		}
-		return .primary
-	}
 }
 
 // MARK: - Pulse Animation Modifier

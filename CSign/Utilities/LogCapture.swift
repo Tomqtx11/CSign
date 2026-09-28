@@ -101,24 +101,11 @@ final class LogCapture: ObservableObject {
 	}
 	
 	nonisolated func printLog(_ message: String) {
-		Task { @MainActor in
-			if !logs.isEmpty {
-				logs += "\n"
-			}
-			logs += "[\(Date().formatted(date: .omitted, time: .standard))] \(message)"
-		}
+		// Log removed to improve performance
 	}
 	
 	nonisolated func updateLastLog(_ message: String) {
-		Task { @MainActor in
-			var lines = logs.components(separatedBy: "\n")
-			if !lines.isEmpty {
-				lines.removeLast()
-			}
-			let newLog = "[\(Date().formatted(date: .omitted, time: .standard))] \(message)"
-			lines.append(newLog)
-			logs = lines.joined(separator: "\n")
-		}
+		// Log removed to improve performance
 	}
 	
 	func stop() {
