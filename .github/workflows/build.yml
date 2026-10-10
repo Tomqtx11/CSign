@@ -38,6 +38,9 @@ jobs:
           swiftc CSign/Utilities/InstallationLinks.swift CSign/Utilities/InstallProgressTracker.swift CSign/Utilities/SigningProgress.swift Tests/RegressionTests.swift -o "$RUNNER_TEMP/csign-regressions"
           "$RUNNER_TEMP/csign-regressions"
 
+      - name: Test IPA packaging and bundle preservation
+        run: python3 Tests/archive_regressions.py
+
       - name: Xcode Cache
         uses: irgaly/xcode-cache@v1
         with:

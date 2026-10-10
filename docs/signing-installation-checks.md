@@ -8,6 +8,7 @@
 - Lỗi lưu Core Data, tệp SSL và xuất IPA từng bị bỏ qua hoặc dùng `try!`. Nay trả lỗi và chỉ báo thành công sau khi lưu xong.
 - URL manifest máy chủ ngoài không mã hoá riêng từng tham số. Nay giữ đúng tên có dấu, `&`, `+`, `#` và URL lồng nhau.
 - Dò cài đặt mỗi 1 ms và coi tiến độ biến mất là thành công. Nay dò mỗi 500 ms, truyền đúng kiểu Objective-C BOOL và yêu cầu xác nhận trên màn hình chính nếu iOS không trả kết quả cuối.
+- Đóng gói nay đọc trực tiếp bundle vào `Payload/` bằng minizip đã có sẵn, không sao chép thêm cả app sang thư mục staging. Đọc theo khối 256 KiB; giữ quyền thực thi và symlink; kiểm tra lỗi ghi và xoá archive dở dang. Cài đặt dùng ZIP không nén, xuất IPA giữ mức nén người dùng chọn.
 - Cài qua pairing từng đọc toàn bộ IPA vào RAM và giữ con trỏ ngoài `withUnsafeBytes`. Nay gửi từng khối 1 MiB trong phạm vi con trỏ hợp lệ.
 - Thiếu delegate để hiện thông báo khi app đang mở. Nay hiện banner cho kết quả ký và trạng thái cài đặt; nhập IPA được ghi đúng là nhập vào thư viện.
 
@@ -20,6 +21,8 @@ python3 -m unittest discover -s Tests -p 'test_*.py' -v
 ```
 
 Kiểm tra chạy bộ ký C++ thực với chứng chỉ thử được tạo tạm và Mach-O fixture: giữ profile cùng hash resource, xoá profile khi chọn xoá, và từ chối mật khẩu sai. Chứng chỉ thử không phải chứng chỉ Apple và không được dùng để cài lên iPhone.
+
+GitHub Actions kiểm tra archive thực (CRC, cấu trúc Payload, tệp ẩn, quyền thực thi, symlink, tên có dấu, mức nén và giữ nguyên bản gốc) bằng `python3 Tests/archive_regressions.py`.
 
 GitHub Actions còn biên dịch/chạy kiểm tra Swift cho mã hoá URL, tiến độ thiếu/timeout, huỷ an toàn và ngăn hai tác vụ ký đồng thời; sau đó build IPA Release trên macOS.
 

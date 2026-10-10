@@ -40,9 +40,11 @@ struct SigningView: View {
 	}
 	
 	var app: AppInfoPresentable
+	private let originalApp: AppSnapshot
 	
 	init(app: AppInfoPresentable, restoredOptions: Options? = nil) {
 		self.app = app
+		self.originalApp = AppSnapshot(app)
 		let storedCert = UserDefaults.standard.integer(forKey: "csign.selectedCert")
 		__temporaryCertificate = State(initialValue: storedCert)
         
@@ -147,7 +149,7 @@ struct SigningView: View {
 						InstallPreviewView(app: action.base, isSharing: action.archive)
 					} else {
 						SigningProgressView(
-							app: app, options: _temporaryOptions, error: _signError, finished: _signFinished,
+							app: _signedApp.map(AppSnapshot.init) ?? originalApp, options: _temporaryOptions, error: _signError, finished: _signFinished,
 							onClose: { _isSigning = false },
 							onInstall: { if let signed = _signedApp { _installAction = AnyApp(base: signed) } },
 							onExport: { if let signed = _signedApp { _installAction = AnyApp(base: signed, archive: true) } }

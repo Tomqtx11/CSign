@@ -23,7 +23,7 @@ struct SigningProgressView: View {
 			}
 			if let error {
 				Label(error.localizedDescription, systemImage: "exclamationmark.circle.fill")
-					.font(.subheadline).foregroundStyle(progress.isCancelled ? .secondary : .red)
+					.font(.subheadline).foregroundStyle(progress.isCancelled ? Color.secondary : Color.red)
 			} else if finished {
 				Label(options.signingOption == .onlyModify ? "Đã lưu bản tuỳ chỉnh" : "Ký thành công", systemImage: "checkmark.seal.fill")
 					.font(.headline).foregroundStyle(CSignTheme.cyan)

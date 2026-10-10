@@ -34,7 +34,7 @@ struct CSignMascotView: View {
 
 	var body: some View {
 		ZStack {
-			RoundedRectangle(cornerRadius: 18).fill(CSignTheme.gradient.opacity(0.12))
+			RoundedRectangle(cornerRadius: 18).fill(CSignTheme.gradient).opacity(0.12)
 			Path { path in
 				path.move(to: CGPoint(x: 10, y: 24))
 				path.addLine(to: CGPoint(x: 12, y: 9))
@@ -81,7 +81,7 @@ struct CSignBrandCard: View {
 			Image(systemName: "sparkles").foregroundStyle(CSignTheme.pink)
 		}
 		.padding(16)
-		.background(CSignTheme.gradient.opacity(0.06), in: RoundedRectangle(cornerRadius: 20))
-		.overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(CSignTheme.gradient.opacity(0.25), lineWidth: 1))
+		.background { RoundedRectangle(cornerRadius: 20).fill(CSignTheme.gradient).opacity(0.06) }
+		.overlay { RoundedRectangle(cornerRadius: 20).strokeBorder(CSignTheme.gradient, lineWidth: 1).opacity(0.25) }
 	}
 }

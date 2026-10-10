@@ -1,5 +1,4 @@
 """Exercise the production C++ signer with an ephemeral test identity (never an Apple identity)."""
-import base64
 import hashlib
 import pathlib
 import plistlib

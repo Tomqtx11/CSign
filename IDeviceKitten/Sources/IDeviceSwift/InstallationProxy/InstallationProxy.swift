@@ -30,7 +30,7 @@ public class InstallationProxy: Identifiable, ObservableObject {
 		var fileHandle: AfcFileHandle?
 		var installproxy: InstallationProxyClientHandle?
 		
-		try await Task.detached(priority: .utility) {
+		let work = Task.detached(priority: .utility) {
 			guard FileManager.default.fileExists(atPath: HeartbeatManager.pairingFile()) else {
 				throw IDeviceSwiftError(message: "Missing Pairing")
 			}
@@ -45,7 +45,9 @@ public class InstallationProxy: Identifiable, ObservableObject {
 				}
 			}
 			
+			var fileClosed = false
 			defer {
+				if !fileClosed, let fileHandle { _ = afc_file_close(fileHandle) }
 				afc_client_free(afcClient)
 				installation_proxy_client_free(installproxy)
 			}
@@ -81,14 +83,12 @@ public class InstallationProxy: Identifiable, ObservableObject {
 				throw IDeviceSwiftError(afc_make_directory_result)
 			}
 			
-			
 			let remoteDir = "/\(stagingDir)/\(self._uuid).ipa"
 			
 			let afc_file_open_result = afc_file_open(afcClient, remoteDir, AfcWrOnly, &fileHandle)
 			guard afc_file_open_result == nil else {
 				throw IDeviceSwiftError(afc_file_open_result)
 			}
-			
 			
 			try await self._updateStatus(with: .sendingPayload)
 			
@@ -120,8 +120,8 @@ public class InstallationProxy: Identifiable, ObservableObject {
 				throw IDeviceSwiftError(afc_file_close_result)
 			}
 			
+			fileClosed = true
 			try await self._updateStatus(with: .installing)
-			
 			
 			if heartbeat.isRsd {
 				guard let adapter = heartbeat.adapter else {
@@ -147,7 +147,6 @@ public class InstallationProxy: Identifiable, ObservableObject {
 				}
 			}
 			
-			
 			let installError: UnsafeMutablePointer<IdeviceFfiError>? = remoteDir.withCString { cString in
 				let context = Unmanaged.passUnretained(self).toOpaque()
 				
@@ -172,7 +171,12 @@ public class InstallationProxy: Identifiable, ObservableObject {
 			
 			try await Task.sleep(nanoseconds: 350_000_000)
 			try await self._updateStatus(with: .completed(.success(())))
-		}.value
+		}
+		try await withTaskCancellationHandler {
+			try await work.value
+		} onCancel: {
+			work.cancel()
+		}
 	}
 	
 	private func _updateStatus(with status: InstallerStatusViewModel.InstallerStatus) async throws {

@@ -171,7 +171,7 @@ struct InstallPreviewView: View {
 			let handler = await ArchiveHandler(app: app, viewModel: viewModel)
 			do {
 				try Task.checkCancellation()
-				try await handler.move()
+				try await handler.prepare()
 				try Task.checkCancellation()
 				// Installing needs a fast container, not a second compression pass.
 				let package = try await handler.archive(forceNoCompression: !isSharing)

@@ -12,12 +12,10 @@ import SwiftUI
 import IDeviceSwift
 
 final class ArchiveHandler: NSObject {
-	private var _lastProgressTime: CFAbsoluteTime = 0
 	let viewModel: InstallerStatusViewModel
 	
 	private let _fileManager = FileManager.default
 	private let _uuid = UUID().uuidString
-	private var _payloadUrl: URL?
 	
 	private let _app: AppSnapshot
 	private let _sourceURL: URL?
@@ -34,56 +32,31 @@ final class ArchiveHandler: NSObject {
 		super.init()
 	}
 	
-	func move() async throws {
-		guard let appUrl = _sourceURL else {
+	func prepare() async throws {
+		guard let appURL = _sourceURL, _fileManager.fileExists(atPath: appURL.path) else {
 			throw SigningFileHandlerError.appNotFound
 		}
-		
-		let payloadUrl = _uniqueWorkDir.appendingPathComponent("Payload")
-		let movedAppURL = payloadUrl.appendingPathComponent(appUrl.lastPathComponent)
+		try _fileManager.createDirectoryIfNeeded(at: _uniqueWorkDir)
+	}
 
-		try _fileManager.createDirectoryIfNeeded(at: payloadUrl)
-		
-		try _fileManager.copyItem(at: appUrl, to: movedAppURL)
-		
-		_payloadUrl = payloadUrl
-	}
-	
 	func archive(forceNoCompression: Bool = false) async throws -> URL {
-        let payloadUrl = self._payloadUrl
-        guard let pUrl = payloadUrl else {
-            throw SigningFileHandlerError.appNotFound
-        }
-        let zipUrl = self._uniqueWorkDir.appendingPathComponent("Archive.zip")
-        let ipaUrl = self._uniqueWorkDir.appendingPathComponent("Archive.ipa")
-        let compression = forceNoCompression ? ZipCompression.NoCompression : (ZipCompression(rawValue: ArchiveHandler.getCompressionLevel()) ?? .DefaultCompression)
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    try Zip.zipFiles(
-                        paths: [pUrl],
-                        zipFilePath: zipUrl,
-                        password: nil,
-                        compression: compression,
-                        progress: { progress in
-                            let currentTime = CFAbsoluteTimeGetCurrent()
-                            if progress == 1.0 || (currentTime - self._lastProgressTime > 0.1) {
-                                self._lastProgressTime = currentTime
-                                Task { @MainActor in
-                                    self.viewModel.packageProgress = progress
-                                }
-                            }
-                        })
-                    try FileManager.default.moveItem(at: zipUrl, to: ipaUrl)
-                    continuation.resume(returning: ipaUrl)
-                } catch {
-                    continuation.resume(throwing: error)
-                }
-            }
-        }
+		guard let appURL = _sourceURL else { throw SigningFileHandlerError.appNotFound }
+		let output = _uniqueWorkDir.appendingPathComponent("Archive.ipa")
+		let compression = forceNoCompression ? ZipCompression.NoCompression :
+			(ZipCompression(rawValue: Self.getCompressionLevel()) ?? .DefaultCompression)
+		let level: Int32
+		switch compression {
+		case .NoCompression: level = 0
+		case .BestSpeed: level = 1
+		case .BestCompression: level = 9
+		default: level = -1
+		}
+		try IPAArchiveWriter.write(app: appURL, to: output, compressionLevel: level) { progress in
+			Task { @MainActor in self.viewModel.packageProgress = progress }
+		}
+		return output
 	}
-	
+
 	func moveToArchive(_ package: URL, shouldOpen: Bool = false) async throws -> URL? {
 		let safeName = (_app.name ?? "App").replacingOccurrences(of: "/", with: "_")
 		let safeVersion = (_app.version ?? "1.0").replacingOccurrences(of: "/", with: "_")

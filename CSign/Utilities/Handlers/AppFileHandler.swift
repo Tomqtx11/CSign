@@ -14,6 +14,7 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 	private let _fileManager = FileManager.default
 	private let _uuid = UUID().uuidString
 	private let _uniqueWorkDir: URL
+	private var _committed = false
 	var uniqueWorkDirPayload: URL?
 
 	private var _ipa: URL
@@ -121,32 +122,34 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 	}
 	
 	func addToDatabase() async throws {
-		let app = try await _directory()
-		
-		guard let appUrl = _fileManager.getPath(in: app, for: "app") else {
-			return
+		let directory = try await _directory()
+		guard let appURL = _fileManager.getPath(in: directory, for: "app"),
+			let bundle = Bundle(url: appURL), let identifier = bundle.bundleIdentifier, !identifier.isEmpty
+		else { throw SigningFileHandlerError.infoPlistNotFound }
+
+		try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+			DispatchQueue.main.async {
+				Storage.shared.addImported(
+					uuid: self._uuid,
+					source: self._sourceProvenance?.sourceRepositoryURL,
+					appName: bundle.name,
+					appIdentifier: identifier,
+					appVersion: bundle.version,
+					appIcon: bundle.iconFileName
+				) { error in
+					if let error { continuation.resume(throwing: error) }
+					else { continuation.resume() }
+				}
+			}
 		}
-		
-		let bundle = Bundle(url: appUrl)
-		
-		Storage.shared.addImported(
-			uuid: _uuid,
-			source: _sourceProvenance?.sourceRepositoryURL,
-			appName: bundle?.name,
-			appIdentifier: bundle?.bundleIdentifier,
-			appVersion: bundle?.version,
-			appIcon: bundle?.iconFileName
-		) { _ in }
-		
-		if let sourceProvenance = _sourceProvenance {
-			Storage.shared.addSourceMetadata(
-				for: _uuid,
-				kind: .imported,
-				provenance: sourceProvenance
-			)
+		_committed = true
+		await MainActor.run {
+			if let provenance = self._sourceProvenance {
+				Storage.shared.addSourceMetadata(for: self._uuid, kind: .imported, provenance: provenance)
+			}
 		}
 	}
-	
+
 	private func _directory() async throws -> URL {
 		// Documents/CSign/Unsigned/\(UUID)
 		_fileManager.unsigned(_uuid)
@@ -154,6 +157,7 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 	
 	func clean() async throws {
 		try _fileManager.removeFileIfNeeded(at: _uniqueWorkDir)
+		if !_committed { try _fileManager.removeFileIfNeeded(at: _fileManager.unsigned(_uuid)) }
 	}
 }
 
