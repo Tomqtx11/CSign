@@ -17,14 +17,6 @@ struct LibraryCellView: View {
 	@State private var _signedUpdateConfirmation: AppUpdate?
 	@State private var _isSignedUpdateConfirmationPresented = false
 
-	var certInfo: Date.ExpirationInfo? {
-		Storage.shared.getCertificate(from: app)?.expiration?.expirationInfo()
-	}
-	
-	var certRevoked: Bool {
-		Storage.shared.getCertificate(from: app)?.revoked == true
-	}
-	
 	var app: AppInfoPresentable
 	@Binding var selectedInfoAppPresenting: AnyApp?
 	@Binding var selectedSigningAppPresenting: AnyApp?
@@ -220,37 +212,24 @@ extension LibraryCellView {
 	@ViewBuilder
 	private func _buttonActions(for app: AppInfoPresentable) -> some View {
 		Group {
-			if let update = updateManager.update(for: app) {
-				if app.isSigned {
-					Button {
-						_signedUpdateConfirmation = update
-						_isSignedUpdateConfirmationPresented = true
-					} label: {
-						FRExpirationPillView(
-							title: .localized("Install"),
-							revoked: certRevoked,
-							expiration: certInfo
-						)
-					}
-				} else {
-					Button {
-						_startUpdateDownload(update)
-					} label: {
-						FRExpirationPillView(
-							title: .localized("Update"),
-							revoked: false,
-							expiration: nil
-						)
-					}
-				}
-			} else if app.isSigned {
+			if app.isSigned {
 				Button {
 					selectedInstallAppPresenting = AnyApp(base: app)
 				} label: {
 					FRExpirationPillView(
 						title: .localized("Install"),
-						revoked: certRevoked,
-						expiration: certInfo
+						revoked: false,
+						expiration: nil
+					)
+				}
+			} else if let update = updateManager.update(for: app) {
+				Button {
+					_startUpdateDownload(update)
+				} label: {
+					FRExpirationPillView(
+						title: .localized("Update"),
+						revoked: false,
+						expiration: nil
 					)
 				}
 			} else {
