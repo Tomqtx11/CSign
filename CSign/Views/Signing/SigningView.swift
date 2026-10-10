@@ -59,9 +59,6 @@ struct SigningView: View {
 	var body: some View {
 		NBNavigationView("", displayMode: .inline) {
 			Form {
-				CSignBrandCard(subtitle: "Chọn chứng chỉ, ký và cài đặt.")
-					.listRowBackground(Color.clear)
-					.listRowInsets(EdgeInsets())
 				_customizationOptions(for: app)
 				_cert()
 				

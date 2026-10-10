@@ -61,14 +61,19 @@ struct LibraryCellView: View {
 				_buttonActions(for: app)
 			}
 		}
-		.padding(isRegular ? 12 : 0)
+		.padding(isRegular ? 12 : 10)
 		.background(
-			isRegular
-				? RoundedRectangle(cornerRadius: 18, style: .continuous)
-				.fill(isSelected && isEditing ? Color.accentColor.opacity(0.1) : Color(.quaternarySystemFill))
-				: nil
+			RoundedRectangle(cornerRadius: 18, style: .continuous)
+				.fill(isSelected && isEditing ? Color.accentColor.opacity(0.1) : CSignTheme.cyan.opacity(0.035))
 		)
-		.contentShape(Rectangle())
+		.overlay {
+			RoundedRectangle(cornerRadius: 18, style: .continuous)
+				.strokeBorder(CSignTheme.gradient, lineWidth: isSelected && isEditing ? 1.5 : 1)
+				.opacity(isSelected && isEditing ? 0.8 : 0.35)
+				.allowsHitTesting(false)
+		}
+		.listRowSeparator(.hidden)
+		.contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 		.onTapGesture {
 			if isEditing {
 				toggleSelection()

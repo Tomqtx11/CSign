@@ -83,16 +83,10 @@ extension ServerInstaller {
 	}
 
 	var html: String {
-		guard let url = try? installationURL,
-			let encoded = try? JSONSerialization.data(withJSONObject: [url.absoluteString]),
-			let javascriptURL = String(data: encoded, encoding: .utf8)
+		guard let url = try? installationURL
 		else { return "<html><body>Thông tin cài đặt không hợp lệ.</body></html>" }
-		return """
-		<html><meta name="viewport" content="width=device-width, initial-scale=1"><body>
-		<p>Đang mở trình cài đặt…</p>
-		<script>window.location.href=\(javascriptURL)[0];</script>
-		</body></html>
-		"""
+		// Safari may block a custom-scheme redirect without a user gesture.
+		return InstallationLinks.installPage(installer: url)
 	}
 
 	var installManifest: [String: Any] {[

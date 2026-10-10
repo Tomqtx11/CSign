@@ -22,7 +22,7 @@ struct InstallationView: View {
 					Image(systemName: "checkmark").foregroundColor(.accentColor)
 				}
 			} footer: {
-				Text("Phương thức cài đặt qua Máy Chủ Local (itms-services://) đảm bảo tính ổn định và an toàn nhất.")
+				Text("Sau khi đóng gói, CSign mở trình cài đặt của iOS. Nếu cách mở trực tiếp không phản hồi, CSign chuyển qua Safari: bấm Cài đặt và xác nhận thông báo của iPhone.")
 			}
 			
 			ServerView()

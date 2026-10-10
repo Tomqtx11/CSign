@@ -28,9 +28,9 @@ class ServerInstaller: Identifiable, ObservableObject {
 	let viewModel: InstallerStatusViewModel
 	private var _server: Application?
 
-	init(app: AppInfoPresentable, viewModel: InstallerStatusViewModel) {
+	init(app: AppInfoPresentable, viewModel: InstallerStatusViewModel, serverMethod: Int? = nil) {
 		self.app = AppSnapshot(app)
-		self._serverMethod = UserDefaults.standard.integer(forKey: "CSign.serverMethod")
+		self._serverMethod = serverMethod ?? UserDefaults.standard.integer(forKey: "CSign.serverMethod")
 		self._ipFix = UserDefaults.standard.bool(forKey: "CSign.ipFix")
 		self.viewModel = viewModel
 	}
@@ -115,6 +115,10 @@ class ServerInstaller: Identifiable, ObservableObject {
 	
 	private func _updateStatus(_ newStatus: InstallerStatusViewModel.InstallerStatus) {
 		DispatchQueue.main.async {
+			self._lifecycleLock.lock()
+			let isRunning = self._needsShutdown
+			self._lifecycleLock.unlock()
+			guard isRunning else { return }
 			switch self.viewModel.status {
 			case .completed, .broken: return
 			default: break

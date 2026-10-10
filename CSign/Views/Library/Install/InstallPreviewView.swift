@@ -8,6 +8,9 @@ struct InstallPreviewView: View {
 	@State private var isWebviewPresenting = false
 	@State private var workTask: Task<Void, Never>?
 	@State private var progressTask: Task<Void, Never>?
+	@State private var promptTask: Task<Void, Never>?
+	@State private var fallbackInstaller: ServerInstaller?
+	@State private var isPreparingFallback = false
 	@State private var archiveHandler: ArchiveHandler?
 	@State private var didStart = false
 	@State private var sentCompletionNotice = false
@@ -16,7 +19,6 @@ struct InstallPreviewView: View {
 	let app: AppSnapshot
 	let isSharing: Bool
 	private let installationMethod: Int
-	private let serverMethod: Int
 	@StateObject private var viewModel: InstallerStatusViewModel
 	@StateObject private var installer: ServerInstaller
 
@@ -25,7 +27,6 @@ struct InstallPreviewView: View {
 		self.app = snapshot
 		self.isSharing = isSharing
 		installationMethod = UserDefaults.standard.integer(forKey: "CSign.installationMethod")
-		serverMethod = UserDefaults.standard.integer(forKey: "CSign.serverMethod")
 		let model = InstallerStatusViewModel(isIdevice: installationMethod == 1)
 		_viewModel = StateObject(wrappedValue: model)
 		_installer = StateObject(wrappedValue: ServerInstaller(app: snapshot, viewModel: model))
@@ -55,13 +56,22 @@ struct InstallPreviewView: View {
 				Text("iOS chưa cung cấp kết quả cuối. Kiểm tra biểu tượng ứng dụng và thông báo trên màn hình chính.")
 					.font(.caption).foregroundStyle(.secondary)
 			}
+			if case .ready = viewModel.status, activeInstaller.getServerMethod() == 1 {
+				Text("Trong Safari, bấm Cài đặt để hiện thông báo xác nhận của iPhone.")
+					.font(.caption).foregroundStyle(.secondary)
+			}
 			HStack {
 				if viewModel.isCompleted || needsConfirmation {
 					Button("Mở ứng dụng") { UIApplication.openApp(with: app.identifier ?? "") }
 						.buttonStyle(.borderedProminent)
 				}
-				if case .ready = viewModel.status, !isSharing {
-					Button("Mở cài đặt", action: openInstaller).buttonStyle(.borderedProminent)
+				if canOpenInstaller {
+					Button(isPreparingFallback ? "Đang mở…" : "Mở cài đặt", action: openInstaller)
+						.buttonStyle(.borderedProminent).disabled(isPreparingFallback)
+					if activeInstaller.getServerMethod() == 0 {
+						Button("Qua Safari", action: useSafariFallback)
+							.buttonStyle(.bordered).disabled(isPreparingFallback)
+					}
 				}
 				Button("Đóng") { dismiss() }.buttonStyle(.bordered)
 			}
@@ -70,7 +80,7 @@ struct InstallPreviewView: View {
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.background(CSignTheme.gradient.opacity(0.05))
 		.sheet(isPresented: $isWebviewPresenting) {
-			SafariRepresentableView(url: installer.pageEndpoint).ignoresSafeArea()
+			SafariRepresentableView(url: activeInstaller.pageEndpoint).ignoresSafeArea()
 		}
 		.onReceive(viewModel.$status, perform: handleStatus)
 		.onAppear {
@@ -83,17 +93,30 @@ struct InstallPreviewView: View {
 			startWork()
 		}
 		.onDisappear {
+			// Presenting Safari can cover this sheet; iOS still needs its IPA server.
+			guard !isWebviewPresenting else { return }
 			isVisible = false
 			workTask?.cancel()
 			progressTask?.cancel()
+			promptTask?.cancel()
 			progressTask = nil
-			let server = installer
+			let server = activeInstaller
 			let handler = archiveHandler
 			DispatchQueue.global(qos: .utility).async {
 				server.shutdown()
 				handler?.clean()
 			}
 			stopBackgroundAudio()
+		}
+	}
+
+	private var activeInstaller: ServerInstaller { fallbackInstaller ?? installer }
+
+	private var canOpenInstaller: Bool {
+		guard !isSharing, installationMethod == 0 else { return false }
+		switch viewModel.status {
+		case .ready, .sendingManifest: return true
+		default: return false
 		}
 	}
 
@@ -110,16 +133,59 @@ struct InstallPreviewView: View {
 	}
 
 	private func openInstaller() {
-		guard isVisible else { return }
-		if serverMethod == 1 {
+		guard isVisible, !isPreparingFallback else { return }
+		if activeInstaller.getServerMethod() == 1 {
 			isWebviewPresenting = true
 		} else {
 			do {
-				let url = try installer.installationURL
+				let url = try activeInstaller.installationURL
 				UIApplication.shared.open(url, options: [:]) { opened in
-					if !opened { viewModel.status = .broken(InstallationError.couldNotOpenInstaller) }
+					Task { @MainActor in
+						guard isVisible, case .ready = viewModel.status else { return }
+						if !opened { useSafariFallback() }
+					}
+				}
+				promptTask?.cancel()
+				promptTask = Task {
+					do { try await Task.sleep(nanoseconds: 8_000_000_000) }
+					catch { return }
+					// open() returning true does not mean iOS fetched the manifest.
+					guard isVisible, case .ready = viewModel.status else { return }
+					useSafariFallback()
 				}
 			} catch { viewModel.status = .broken(error) }
+		}
+	}
+
+	private func useSafariFallback() {
+		guard isVisible, !isPreparingFallback, activeInstaller.getServerMethod() == 0,
+			let package = activeInstaller.packageUrl else { return }
+		promptTask?.cancel()
+		isPreparingFallback = true
+		let original = activeInstaller
+		let replacement = ServerInstaller(app: app, viewModel: viewModel, serverMethod: 1)
+		fallbackInstaller = replacement
+		workTask = Task.detached(priority: .userInitiated) {
+			original.shutdown()
+			do {
+				try Task.checkCancellation()
+				replacement.packageUrl = package
+				try replacement.start()
+				try Task.checkCancellation()
+				try await MainActor.run {
+					guard isVisible else { throw CancellationError() }
+					isPreparingFallback = false
+					viewModel.status = .ready
+				}
+			} catch {
+				replacement.shutdown()
+				if !Task.isCancelled {
+					await MainActor.run {
+						isPreparingFallback = false
+						viewModel.status = .broken(error)
+					}
+				}
+			}
 		}
 	}
 
@@ -129,13 +195,17 @@ struct InstallPreviewView: View {
 		case .ready:
 			if !isSharing && installationMethod == 0 { openInstaller() }
 		case .sendingPayload:
+			promptTask?.cancel()
 			isWebviewPresenting = false
+		case .sendingManifest:
+			promptTask?.cancel()
 		case .installing:
 			if installationMethod == 0, progressTask == nil, let identifier = app.identifier {
 				AppNotifications.post(title: "Đã gửi gói cài đặt", body: "iOS đang xử lý \(app.name ?? identifier).")
 				progressTask = pollInstallation(identifier)
 			}
 		case .completed(let result):
+			promptTask?.cancel()
 			progressTask?.cancel()
 			progressTask = nil
 			stopBackgroundAudio()
@@ -149,6 +219,7 @@ struct InstallPreviewView: View {
 				}
 			}
 		case .broken(let error):
+			promptTask?.cancel()
 			progressTask?.cancel()
 			progressTask = nil
 			stopBackgroundAudio()
@@ -192,12 +263,25 @@ struct InstallPreviewView: View {
 					}
 				} else if method == 0 {
 					server.packageUrl = package
-					try server.start()
+					var startedServer = server
+					do { try server.start() }
+					catch {
+						guard server.getServerMethod() == 0 else { throw error }
+						server.shutdown()
+						// Expired/missing local TLS must not strand a signed package.
+						startedServer = await MainActor.run {
+							ServerInstaller(app: app, viewModel: model, serverMethod: 1)
+						}
+						startedServer.packageUrl = package
+						try startedServer.start()
+					}
 					try Task.checkCancellation()
+					let preparedServer = startedServer
 					try await MainActor.run {
 						try Task.checkCancellation()
 						guard isVisible else { throw CancellationError() }
 						archiveHandler = handler
+						if preparedServer !== server { fallbackInstaller = preparedServer }
 						viewModel.status = .ready
 					}
 				} else if method == 1 {

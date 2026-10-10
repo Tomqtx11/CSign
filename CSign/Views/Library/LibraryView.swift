@@ -72,9 +72,6 @@ struct LibraryView: View {
 	var body: some View {
 		NBNavigationView(.localized("Library")) {
 			NBListAdaptable {
-				CSignBrandCard(isWorking: true)
-					.listRowSeparator(.hidden)
-					.listRowBackground(Color.clear)
 				if !_filteredImportedApps.isEmpty {
 					NBSection(
 						.localized("Imported"),

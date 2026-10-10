@@ -21,10 +21,11 @@ enum InstallationLinks {
 		guard let identifier, !identifier.isEmpty else { throw InstallationError.invalidMetadata }
 		var components = URLComponents(string: "https://api.palera.in/genPlist")!
 		components.queryItems = [
-			URLQueryItem(name: "bundleid", value: identifier),
-			URLQueryItem(name: "name", value: name ?? identifier),
-			URLQueryItem(name: "version", value: version ?? "1.0"),
-			URLQueryItem(name: "fetchurl", value: payload.absoluteString)
+			// The plist service inserts query values directly into XML text nodes.
+			URLQueryItem(name: "bundleid", value: xmlText(identifier)),
+			URLQueryItem(name: "name", value: xmlText(name ?? identifier)),
+			URLQueryItem(name: "version", value: xmlText(version ?? "1.0")),
+			URLQueryItem(name: "fetchurl", value: xmlText(payload.absoluteString))
 		]
 		// Query decoders may treat '+' as a space; preserve literal plus signs.
 		components.percentEncodedQuery = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
@@ -32,14 +33,40 @@ enum InstallationLinks {
 		return url
 	}
 
+	private static func xmlText(_ value: String) -> String {
+		value.replacingOccurrences(of: "&", with: "&amp;")
+			.replacingOccurrences(of: "<", with: "&lt;")
+			.replacingOccurrences(of: ">", with: "&gt;")
+	}
+
 	static func installer(manifest: URL) -> URL {
 		var components = URLComponents()
 		components.scheme = "itms-services"
+		// An empty authority preserves Apple's required itms-services://? form.
+		components.host = ""
 		components.queryItems = [
 			URLQueryItem(name: "action", value: "download-manifest"),
 			URLQueryItem(name: "url", value: manifest.absoluteString)
 		]
 		components.percentEncodedQuery = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
 		return components.url!
+	}
+
+	static func installPage(installer: URL) -> String {
+		let href = installer.absoluteString
+			.replacingOccurrences(of: "&", with: "&amp;")
+			.replacingOccurrences(of: "\"", with: "&quot;")
+			.replacingOccurrences(of: "<", with: "&lt;")
+			.replacingOccurrences(of: ">", with: "&gt;")
+		return """
+		<!doctype html><html lang="vi"><head><meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<style>body{font:17px -apple-system,sans-serif;text-align:center;padding:36px 20px;color:#15414a;background:#f4fbfc}a{display:inline-block;background:#008aa6;color:white;padding:16px 28px;border-radius:18px;text-decoration:none}p{line-height:1.5}</style>
+		<title>Cài đặt ứng dụng</title></head><body>
+		<h2>Ứng dụng đã sẵn sàng</h2><p>Bấm Cài đặt, rồi xác nhận thông báo của iOS.</p>
+		<a id="install" href="\(href)">Cài đặt</a>
+		<p>Giữ CSign mở cho đến khi iPhone tải xong gói cài đặt.</p>
+		</body></html>
+		"""
 	}
 }

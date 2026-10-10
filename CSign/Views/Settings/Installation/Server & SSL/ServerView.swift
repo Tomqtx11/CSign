@@ -66,6 +66,8 @@ struct ServerView: View {
 				}
 				Toggle(.localized("Only use localhost address"), systemImage: "lifepreserver", isOn: $_ipFix)
 					.disabled(_serverMethod != 1)
+			} footer: {
+				Text("Chế độ Safari dùng máy chủ ngoài để tạo manifest và cần Internet; tên, Bundle ID, phiên bản và địa chỉ tải được gửi tới api.palera.in. IPA được phục vụ từ iPhone. Máy chủ ngoài cũng được dùng khi cách mở trực tiếp không phản hồi.")
 			}
 			
 			Section {

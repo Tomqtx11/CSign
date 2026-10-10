@@ -64,24 +64,3 @@ struct CSignMascotView: View {
 		.accessibilityHidden(true)
 	}
 }
-
-struct CSignBrandCard: View {
-	var title = "CSign"
-	var subtitle = "Ký app gọn nhẹ, theo cách của bạn."
-	var isWorking = false
-
-	var body: some View {
-		HStack(spacing: 14) {
-			CSignMascotView(isWorking: isWorking)
-			VStack(alignment: .leading, spacing: 4) {
-				Text(title).font(.system(.title3, design: .rounded).bold()).foregroundStyle(CSignTheme.gradient)
-				Text(subtitle).font(.caption).foregroundStyle(.secondary)
-			}
-			Spacer(minLength: 0)
-			Image(systemName: "sparkles").foregroundStyle(CSignTheme.pink)
-		}
-		.padding(16)
-		.background { RoundedRectangle(cornerRadius: 20).fill(CSignTheme.gradient).opacity(0.06) }
-		.overlay { RoundedRectangle(cornerRadius: 20).strokeBorder(CSignTheme.gradient, lineWidth: 1).opacity(0.25) }
-	}
-}
