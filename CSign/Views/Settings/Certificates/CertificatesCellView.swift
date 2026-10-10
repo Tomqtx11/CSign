@@ -28,7 +28,8 @@ struct CertificatesCellView: View {
 
 		VStack(spacing: 6) {
 			let title = {
-				var title = cert.nickname ?? data?.Name ?? .localized("Unknown")
+				let nickname = cert.nickname == "PersonalCert" ? "Certificate" : cert.nickname
+				var title = nickname ?? data?.Name ?? .localized("Unknown")
 				
 				if let getTaskAllow = data?.Entitlements?["get-task-allow"]?.value as? Bool, getTaskAllow == true {
 					title = "🐞 \(title)"
@@ -39,7 +40,7 @@ struct CertificatesCellView: View {
 			
 			NBTitleWithSubtitleView(
 				title: title,
-				subtitle: data?.AppIDName ?? .localized("Unknown")
+				subtitle: data?.TeamName ?? .localized("Unknown")
 			)
 			
 			_certInfoPill(data: cert)
