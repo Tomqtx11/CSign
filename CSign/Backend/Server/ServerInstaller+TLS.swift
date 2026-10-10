@@ -26,10 +26,16 @@ extension ServerInstaller {
 		let app = Application(Self.env)
 		app.threadPool = .init(numberOfThreads: 1)
 		
-		if getServerMethod() != 1 {
-			if let tls = try tls() {
-				app.http.server.configuration.tlsConfiguration = tls
+		do {
+			if getServerMethod() != 1 {
+				guard let configuration = try tls(), readCommonName()?.isEmpty == false else {
+					throw InstallationError.missingTLS
+				}
+				app.http.server.configuration.tlsConfiguration = configuration
 			}
+		} catch {
+			app.shutdown()
+			throw error
 		}
 		
 		app.http.server.configuration.hostname = sni()

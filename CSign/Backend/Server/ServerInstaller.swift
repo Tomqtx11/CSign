@@ -19,19 +19,31 @@ class ServerInstaller: Identifiable, ObservableObject {
 	let id = UUID()
 	let port = Int.random(in: 4000...8000)
 	private var _needsShutdown = false
+	private let _lifecycleLock = NSLock()
 	
 	var packageUrl: URL?
-	var app: AppInfoPresentable
+	let app: AppSnapshot
+	private let _serverMethod: Int
+	private let _ipFix: Bool
 	@ObservedObject var viewModel: InstallerStatusViewModel
 	private var _server: Application?
 
-	init(app: AppInfoPresentable, viewModel: InstallerStatusViewModel) throws {
-		self.app = app
+	init(app: AppInfoPresentable, viewModel: InstallerStatusViewModel) {
+		self.app = AppSnapshot(app)
+		self._serverMethod = UserDefaults.standard.integer(forKey: "CSign.serverMethod")
+		self._ipFix = UserDefaults.standard.bool(forKey: "CSign.ipFix")
 		self.viewModel = viewModel
+	}
+
+	func start() throws {
+		_lifecycleLock.lock()
+		defer { _lifecycleLock.unlock() }
+		guard app.identifier?.isEmpty == false else { throw InstallationError.invalidMetadata }
+		guard (0...1).contains(_serverMethod) else { throw InstallationError.invalidServerMethod }
 		try _setup()
+		_needsShutdown = true
 		try _configureRoutes()
 		try _server?.server.start()
-		_needsShutdown = true
 	}
 	
 	deinit {
@@ -39,7 +51,7 @@ class ServerInstaller: Identifiable, ObservableObject {
 	}
 	
 	private func _setup() throws {
-		self._server = try? setupApp(port: port)
+		self._server = try setupApp(port: port)
 	}
 		
 	private func _configureRoutes() throws {
@@ -87,7 +99,13 @@ class ServerInstaller: Identifiable, ObservableObject {
 		}
 	}
 	
+	func shutdown() {
+		_shutdownServer()
+	}
+
 	private func _shutdownServer() {
+		_lifecycleLock.lock()
+		defer { _lifecycleLock.unlock() }
 		guard _needsShutdown else { return }
 		
 		_needsShutdown = false
@@ -97,15 +115,19 @@ class ServerInstaller: Identifiable, ObservableObject {
 	
 	private func _updateStatus(_ newStatus: InstallerStatusViewModel.InstallerStatus) {
 		DispatchQueue.main.async {
+			switch self.viewModel.status {
+			case .completed, .broken: return
+			default: break
+			}
 			self.viewModel.status = newStatus
 		}
 	}
 		
 	func getServerMethod() -> Int {
-		UserDefaults.standard.integer(forKey: "CSign.serverMethod")
+		_serverMethod
 	}
 	
 	func getIPFix() -> Bool {
-		UserDefaults.standard.bool(forKey: "CSign.ipFix")
+		_ipFix
 	}
 }

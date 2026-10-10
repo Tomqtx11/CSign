@@ -81,7 +81,6 @@ public class InstallationProxy: Identifiable, ObservableObject {
 				throw IDeviceSwiftError(afc_make_directory_result)
 			}
 			
-			print("1")
 			
 			let remoteDir = "/\(stagingDir)/\(self._uuid).ipa"
 			
@@ -90,7 +89,6 @@ public class InstallationProxy: Identifiable, ObservableObject {
 				throw IDeviceSwiftError(afc_file_open_result)
 			}
 			
-			print("2")
 			
 			try await self._updateStatus(with: .sendingPayload)
 			
@@ -98,32 +96,24 @@ public class InstallationProxy: Identifiable, ObservableObject {
 				throw IDeviceSwiftError(message: "Missing File Handle")
 			}
 			
-			let data = try Data(contentsOf: url)
-			let totalSize = data.count
-			let chunkSize = 64 * 1024 * 1024 // 67mb
-			var totalBytesWritten = 0
-			
-			guard let rawBuffer = data.withUnsafeBytes({ $0.baseAddress })?.assumingMemoryBound(to: UInt8.self) else {
-				throw IDeviceSwiftError(message: "Error writing to AFC")
-			}
-			
-			while totalBytesWritten < totalSize {
-				let bytesLeft = totalSize - totalBytesWritten
-				let bytesToWrite = min(chunkSize, bytesLeft)
-				let writePtr = rawBuffer.advanced(by: totalBytesWritten)
-				
-				let result = afc_file_write(fileHandle, writePtr, bytesToWrite)
-				if result != nil {
-					throw IDeviceSwiftError(result)
+			let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+			let totalSize = (attributes[.size] as? NSNumber)?.int64Value ?? 0
+			guard totalSize > 0 else { throw IDeviceSwiftError(message: "Empty IPA") }
+			let input = try FileHandle(forReadingFrom: url)
+			defer { try? input.close() }
+			var totalBytesWritten: Int64 = 0
+			// Keep memory bounded and use the pointer only inside withUnsafeBytes.
+			while let chunk = try input.read(upToCount: 1024 * 1024), !chunk.isEmpty {
+				try Task.checkCancellation()
+				let writeError = chunk.withUnsafeBytes { buffer in
+					afc_file_write(fileHandle, buffer.baseAddress!.assumingMemoryBound(to: UInt8.self), chunk.count)
 				}
-				
-				totalBytesWritten += bytesToWrite
-				
-				let progress = Double(totalBytesWritten) / Double(totalSize)
-				try await self._updateUploadProgress(with: progress)
+				if let writeError { throw IDeviceSwiftError(writeError) }
+				totalBytesWritten += Int64(chunk.count)
+				try await self._updateUploadProgress(with: Double(totalBytesWritten) / Double(totalSize))
 			}
-			
-			print(2)
+			guard totalBytesWritten == totalSize else { throw IDeviceSwiftError(message: "Incomplete IPA upload") }
+
 			
 			let afc_file_close_result = afc_file_close(fileHandle)
 			guard afc_file_close_result == nil else {
@@ -142,7 +132,6 @@ public class InstallationProxy: Identifiable, ObservableObject {
 					throw IDeviceSwiftError(message: "Cannot find RSD handshake")
 				}
 				
-				print(3)
 				
 				let installation_proxy_connect_rsd_result = installation_proxy_connect_rsd(adapter, handshake, &installproxy)
 				guard installation_proxy_connect_rsd_result == nil else {
@@ -158,7 +147,6 @@ public class InstallationProxy: Identifiable, ObservableObject {
 				}
 			}
 			
-			print(4)
 			
 			let installError: UnsafeMutablePointer<IdeviceFfiError>? = remoteDir.withCString { cString in
 				let context = Unmanaged.passUnretained(self).toOpaque()

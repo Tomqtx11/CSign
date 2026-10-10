@@ -1,259 +1,238 @@
-//
-//  InstallPreview.swift
-//  CSign
-//
-//  Created by samara on 22.04.2025.
-//
-
 import SwiftUI
 import NimbleViews
 import IDeviceSwift
-import OSLog
 
-// MARK: - View
 struct InstallPreviewView: View {
-	@Environment(\.dismiss) var dismiss
-
-	@AppStorage("CSign.useShareSheetForArchiving") private var _useShareSheet: Bool = false
-	@AppStorage("CSign.installationMethod") private var _installationMethod: Int = 0
-	@AppStorage("CSign.serverMethod") private var _serverMethod: Int = 0
-	@State private var _isWebviewPresenting = false
+	@Environment(\.dismiss) private var dismiss
+	@AppStorage("CSign.useShareSheetForArchiving") private var useShareSheet = false
+	@State private var isWebviewPresenting = false
+	@State private var workTask: Task<Void, Never>?
 	@State private var progressTask: Task<Void, Never>?
-	
-	var app: AppInfoPresentable
-	@StateObject var viewModel: InstallerStatusViewModel
-	@StateObject var installer: ServerInstaller
-	
-	@State var isSharing: Bool
-	
+	@State private var archiveHandler: ArchiveHandler?
+	@State private var didStart = false
+	@State private var sentCompletionNotice = false
+	@State private var isVisible = false
+
+	let app: AppSnapshot
+	let isSharing: Bool
+	private let installationMethod: Int
+	private let serverMethod: Int
+	@StateObject private var viewModel: InstallerStatusViewModel
+	@StateObject private var installer: ServerInstaller
+
 	init(app: AppInfoPresentable, isSharing: Bool = false) {
-		self.app = app
+		let snapshot = AppSnapshot(app)
+		self.app = snapshot
 		self.isSharing = isSharing
-		let viewModel = InstallerStatusViewModel(isIdevice: UserDefaults.standard.integer(forKey: "CSign.installationMethod") == 1)
-		self._viewModel = StateObject(wrappedValue: viewModel)
-		self._installer = StateObject(wrappedValue: try! ServerInstaller(app: app, viewModel: viewModel))
+		installationMethod = UserDefaults.standard.integer(forKey: "CSign.installationMethod")
+		serverMethod = UserDefaults.standard.integer(forKey: "CSign.serverMethod")
+		let model = InstallerStatusViewModel(isIdevice: installationMethod == 1)
+		_viewModel = StateObject(wrappedValue: model)
+		_installer = StateObject(wrappedValue: ServerInstaller(app: snapshot, viewModel: model))
 	}
-	
-	// MARK: Body
+
 	var body: some View {
-		let cornerRadius = {
-			if #available(iOS 26.0, *) {
-				28.0
-			} else {
-				10.5
+		VStack(spacing: 18) {
+			HStack(spacing: 14) {
+				FRAppIconView(app: app, size: 56)
+				VStack(alignment: .leading, spacing: 4) {
+					Text(app.name ?? "Ứng dụng").font(.headline).lineLimit(2)
+					Text(isSharing ? "Xuất IPA" : "Cài đặt ứng dụng").font(.caption).foregroundStyle(.secondary)
+				}
+				Spacer(minLength: 0)
+				CSignMascotView(isWorking: isBusy)
 			}
-		}()
-		
-		ZStack {
-			InstallProgressView(app: app, viewModel: viewModel)
-			_status()
-			_button()
+			ProgressView(value: viewModel.overallProgress).tint(CSignTheme.cyan)
+			Label(viewModel.statusLabel, systemImage: viewModel.statusImage).font(.subheadline)
+			if case .none = viewModel.status {
+				Text("Đóng gói: \(Int(viewModel.packageProgress * 100))%")
+					.font(.caption).foregroundStyle(.secondary)
+			}
+			if case .broken(let error) = viewModel.status {
+				Text(error.localizedDescription).font(.caption).foregroundStyle(.red)
+			}
+			if case .awaitingConfirmation = viewModel.status {
+				Text("iOS chưa cung cấp kết quả cuối. Kiểm tra biểu tượng ứng dụng và thông báo trên màn hình chính.")
+					.font(.caption).foregroundStyle(.secondary)
+			}
+			HStack {
+				if viewModel.isCompleted || needsConfirmation {
+					Button("Mở ứng dụng") { UIApplication.openApp(with: app.identifier ?? "") }
+						.buttonStyle(.borderedProminent)
+				}
+				if case .ready = viewModel.status, !isSharing {
+					Button("Mở cài đặt", action: openInstaller).buttonStyle(.borderedProminent)
+				}
+				Button("Đóng") { dismiss() }.buttonStyle(.bordered)
+			}
 		}
-		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-		.background(Color(UIColor.secondarySystemBackground))
-		.cornerRadius(cornerRadius)
-		.padding()
-		.sheet(isPresented: $_isWebviewPresenting) {
+		.padding(24)
+		.frame(maxWidth: .infinity, maxHeight: .infinity)
+		.background(CSignTheme.gradient.opacity(0.05))
+		.sheet(isPresented: $isWebviewPresenting) {
 			SafariRepresentableView(url: installer.pageEndpoint).ignoresSafeArea()
 		}
-		.onReceive(viewModel.$status) { newStatus in
-			if _installationMethod == 0 {
-				if case .ready = newStatus {
-					if _serverMethod == 0 {
-						UIApplication.shared.open(URL(string: installer.iTunesLink)!)
-					} else if _serverMethod == 1 {
-						_isWebviewPresenting = true
-					}
-				}
-				
-				if case .sendingPayload = newStatus, _serverMethod == 1 {
-					_isWebviewPresenting = false
-				}
-				
-				if case .installing = newStatus {
-					if progressTask == nil {
-						progressTask = startInstallProgressPolling(
-							bundleID: app.identifier!,
-							viewModel: viewModel
-						)
-					}
-				}
-				
-				switch newStatus {
-				case .completed, .broken(_):
-					progressTask?.cancel()
-					progressTask = nil
-					#if !targetEnvironment(macCatalyst)
-					BackgroundAudioManager.shared.stop()
-					#endif
-				default:
-					break
-				}
-			}
-		}
-		.onAppear(perform: _install)
-		
-		#if !targetEnvironment(macCatalyst)
+		.onReceive(viewModel.$status, perform: handleStatus)
 		.onAppear {
+			isVisible = true
+			guard !didStart else { return }
+			didStart = true
+			#if !targetEnvironment(macCatalyst)
 			BackgroundAudioManager.shared.start()
+			#endif
+			startWork()
 		}
-		#endif
-		
 		.onDisappear {
+			isVisible = false
+			workTask?.cancel()
 			progressTask?.cancel()
 			progressTask = nil
-			
-			#if !targetEnvironment(macCatalyst)
-			BackgroundAudioManager.shared.stop()
-			#endif
+			let server = installer
+			let handler = archiveHandler
+			DispatchQueue.global(qos: .utility).async {
+				server.shutdown()
+				handler?.clean()
+			}
+			stopBackgroundAudio()
 		}
 	}
-	
-	@ViewBuilder
-	private func _status() -> some View {
-		VStack(alignment: .leading, spacing: 4) {
-			Label(viewModel.statusLabel, systemImage: viewModel.statusImage)
-				.labelStyle(.titleAndIcon)
-			
-			if case .none = viewModel.status {
-				if viewModel.packageProgress > 0 && viewModel.packageProgress < 1.0 {
-					Text("Đang nén: \(Int(viewModel.packageProgress * 100))%")
-						.font(.caption)
-						.foregroundColor(.secondary)
+
+	private var needsConfirmation: Bool {
+		if case .awaitingConfirmation = viewModel.status { return true }
+		return false
+	}
+
+	private var isBusy: Bool {
+		switch viewModel.status {
+		case .none, .ready, .sendingManifest, .sendingPayload, .installing: return true
+		default: return false
+		}
+	}
+
+	private func openInstaller() {
+		guard isVisible else { return }
+		if serverMethod == 1 {
+			isWebviewPresenting = true
+		} else {
+			do {
+				let url = try installer.installationURL
+				UIApplication.shared.open(url, options: [:]) { opened in
+					if !opened { viewModel.status = .broken(InstallationError.couldNotOpenInstaller) }
+				}
+			} catch { viewModel.status = .broken(error) }
+		}
+	}
+
+	private func handleStatus(_ status: InstallerStatusViewModel.InstallerStatus) {
+		guard isVisible else { return }
+		switch status {
+		case .ready:
+			if !isSharing && installationMethod == 0 { openInstaller() }
+		case .sendingPayload:
+			isWebviewPresenting = false
+		case .installing:
+			if installationMethod == 0, progressTask == nil, let identifier = app.identifier {
+				AppNotifications.post(title: "Đã gửi gói cài đặt", body: "iOS đang xử lý \(app.name ?? identifier).")
+				progressTask = pollInstallation(identifier)
+			}
+		case .completed(let result):
+			progressTask?.cancel()
+			progressTask = nil
+			stopBackgroundAudio()
+			if !sentCompletionNotice {
+				sentCompletionNotice = true
+				switch result {
+				case .success:
+					viewModel.installProgress = 1
+					AppNotifications.post(title: "Cài đặt hoàn tất", body: "\(app.name ?? "Ứng dụng") đã được cài đặt.")
+				case .failure(let error): viewModel.status = .broken(error)
 				}
 			}
-		}
-		.padding()
-		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-		.animation(.smooth, value: viewModel.statusImage)
-	}
-	
-	@ViewBuilder
-	private func _button() -> some View {
-		ZStack {
-			if viewModel.isCompleted {
-				Button {
-					UIApplication.openApp(with: app.identifier ?? "")
-				} label: {
-					NBButton("Open", systemImage: "", style: .text)
-				}
-				.padding()
-				.compatTransition()
+		case .broken(let error):
+			progressTask?.cancel()
+			progressTask = nil
+			stopBackgroundAudio()
+			if !sentCompletionNotice {
+				sentCompletionNotice = true
+				AppNotifications.post(title: isSharing ? "Không thể xuất IPA" : "Không thể cài đặt", body: error.localizedDescription)
 			}
+		case .awaitingConfirmation:
+			stopBackgroundAudio()
+		default: break
 		}
-		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-		.animation(.easeInOut(duration: 0.3), value: viewModel.isCompleted)
 	}
-	
-	private func _install() {
-		guard isSharing || app.identifier != Bundle.main.bundleIdentifier! || _installationMethod == 1 else {
-			UIAlertController.showAlertWithOk(
-				title: .localized("Install"),
-				message: .localized("You cannot update ‘%@‘ with itself, please use an alternative tool to update it.", arguments: Bundle.main.name)
-			)
+
+	private func startWork() {
+		guard isSharing || app.identifier != Bundle.main.bundleIdentifier || installationMethod == 1 else {
+			viewModel.status = .broken(InstallationError.couldNotOpenInstaller)
 			return
 		}
-				
-		Task.detached {
+		workTask = Task.detached(priority: .userInitiated) {
+			let handler = await ArchiveHandler(app: app, viewModel: viewModel)
 			do {
-				let handler = await ArchiveHandler(app: app, viewModel: viewModel)
+				try Task.checkCancellation()
 				try await handler.move()
-				
-				let packageUrl = try await handler.archive(forceNoCompression: !isSharing)
-				
-				if await !isSharing {
-					if await _installationMethod == 0 {
-						await MainActor.run {
-							installer.packageUrl = packageUrl
-							viewModel.status = .ready
-						}
-						
-						if case .installing = await viewModel.status {
-							let task = await startInstallProgressPolling(
-								bundleID: app.identifier!,
-								viewModel: viewModel
-							)
-
-							await MainActor.run {
-								progressTask = task
-							}
-						}
-					} else if await _installationMethod == 1 {
-						let handler = await InstallationProxy(viewModel: viewModel)
-						try await handler.install(at: packageUrl, suspend: app.identifier == Bundle.main.bundleIdentifier!)
-					}
-				} else {
-					let package = try await handler.moveToArchive(packageUrl, shouldOpen: !_useShareSheet)
-					
-					if await !_useShareSheet {
-						await MainActor.run {
-							dismiss()
-						}
-					} else {
-						if let package {
-							await MainActor.run {
-								dismiss()
-								UIActivityViewController.show(activityItems: [package])
-							}
-						}
-					}
-				}
-			} catch {
-				await progressTask?.cancel()
-				
-				await MainActor.run {
-					UIAlertController.showAlertWithOk(
-						title: .localized("Install"),
-						message: String(describing: error),
-						action: {
-							HeartbeatManager.shared.start(true)
-							dismiss()
-						}
-					)
-				}
-			}
-		}
-	}
-	
-	private func startInstallProgressPolling(
-		bundleID: String,
-		viewModel: InstallerStatusViewModel
-	) -> Task<Void, Never> {
-
-		Task.detached(priority: .background) {
-			var hasStarted = false
-
-			while !Task.isCancelled {
-				let rawProgress = await UIApplication.installProgress(for: bundleID) ?? 0.0
-
-				if rawProgress > 0 {
-					hasStarted = true
-				}
-
-				let progress = await hasStarted
-					? _normalizeInstallProgress(rawProgress)
-					: 0.0
-
-				Logger.misc.info("Install progress for \(bundleID): \(progress)")
-
-				await MainActor.run {
-					viewModel.installProgress = progress
-				}
-
-				if hasStarted && rawProgress == 0 {
+				try Task.checkCancellation()
+				// Installing needs a fast container, not a second compression pass.
+				let package = try await handler.archive(forceNoCompression: !isSharing)
+				try Task.checkCancellation()
+				if isSharing {
+					let share = await useShareSheet
+					let exported = try await handler.moveToArchive(package, shouldOpen: !share)
+					handler.clean()
 					await MainActor.run {
-						viewModel.installProgress = 1.0
-						viewModel.status = .completed(.success(()))
+						dismiss()
+						if share, let exported { UIActivityViewController.show(activityItems: [exported]) }
 					}
-					break
+				} else if installationMethod == 0 {
+					installer.packageUrl = package
+					try installer.start()
+					try Task.checkCancellation()
+					try await MainActor.run {
+						try Task.checkCancellation()
+						guard isVisible else { throw CancellationError() }
+						archiveHandler = handler
+						viewModel.status = .ready
+					}
+				} else if installationMethod == 1 {
+					let proxy = InstallationProxy(viewModel: viewModel)
+					try await proxy.install(at: package, suspend: app.identifier == Bundle.main.bundleIdentifier)
+					handler.clean()
+				} else { throw InstallationError.invalidServerMethod }
+			} catch {
+				installer.shutdown()
+				handler.clean()
+				if !Task.isCancelled {
+					await MainActor.run { viewModel.status = .broken(error) }
 				}
-
-				try? await Task.sleep(nanoseconds: 1_000_000) // 1 ms
 			}
 		}
 	}
 
-	private func _normalizeInstallProgress(_ rawProgress: Double) -> Double {
-		min(1.0, max(0.0, (rawProgress - 0.6) / 0.3))
+	private func pollInstallation(_ identifier: String) -> Task<Void, Never> {
+		Task {
+			var tracker = InstallProgressTracker()
+			while !Task.isCancelled {
+				let update = tracker.update(UIApplication.installProgress(for: identifier, makeSynchronous: false))
+				switch update {
+				case .waiting: break
+				case .progress(let value): viewModel.installProgress = value
+				case .completed:
+					viewModel.status = .completed(.success(()))
+					return
+				case .needsConfirmation:
+					viewModel.status = .awaitingConfirmation
+					return
+				}
+				do { try await Task.sleep(nanoseconds: 500_000_000) }
+				catch { return }
+			}
+		}
+	}
+
+	private func stopBackgroundAudio() {
+		#if !targetEnvironment(macCatalyst)
+		BackgroundAudioManager.shared.stop()
+		#endif
 	}
 }

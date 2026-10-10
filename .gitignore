@@ -4,3 +4,4 @@ build/
 *.ipa
 .swiftpm/
 xcuserdata/
+__pycache__/

@@ -7,23 +7,22 @@
 
 import Foundation
 import ZsignSwift
+import ZsignC
 import UIKit
 
 final class ZsignHandler {
-	var hadError: Error?
-	
 	private var _appUrl: URL
 	private var _options: Options
-	private var _certificate: CertificatePair?
+	private let _identity: SigningIdentity?
 	
 	init(
 		appUrl: URL,
 		options: Options = OptionsManager.shared.options,
-		cert: CertificatePair? = nil
+		identity: SigningIdentity? = nil
 	) {
 		self._appUrl = appUrl
 		self._options = options
-		self._certificate = cert
+		self._identity = identity
 	}
 	
 	func disinject() async throws {
@@ -46,19 +45,30 @@ final class ZsignHandler {
 	}
 	
 	func sign() async throws {
-		guard let cert = _certificate else {
+		guard let identity = _identity else {
 			throw SigningFileHandlerError.missingCertifcate
 		}
 
+		guard let provision = identity.provisionURL, let certificate = identity.certificateURL,
+			FileManager.default.fileExists(atPath: provision.path),
+			FileManager.default.fileExists(atPath: certificate.path)
+		else { throw SigningFileHandlerError.certificateFilesMissing }
+		if let expiration = identity.expiration, expiration <= Date() {
+			throw SigningFileHandlerError.certificateExpired
+		}
 		return try await withCheckedThrowingContinuation { continuation in
 			DispatchQueue.global(qos: .userInitiated).async {
+				guard p12_password_check(certificate.path, identity.password) else {
+					continuation.resume(throwing: SigningFileHandlerError.invalidCertificatePassword)
+					return
+				}
 				let success = Zsign.sign(
 					appPath: self._appUrl.relativePath,
-					provisionPath: Storage.shared.getFile(.provision, from: cert)?.path ?? "",
-					p12Path: Storage.shared.getFile(.certificate, from: cert)?.path ?? "",
-					p12Password: cert.password ?? "",
+					provisionPath: identity.provisionURL?.path ?? "",
+					p12Path: identity.certificateURL?.path ?? "",
+					p12Password: identity.password,
 					entitlementsPath: self._options.appEntitlementsFile?.path ?? "",
-					removeProvision: !self._options.removeProvisioning,
+					removeProvision: self._options.removeProvisioning,
 					completion: { _ in }
 				)
 				if !success {
@@ -77,7 +87,7 @@ final class ZsignHandler {
 					appPath: self._appUrl.relativePath,
 					entitlementsPath: self._options.appEntitlementsFile?.path ?? "",
 					adhoc: true,
-					removeProvision: !self._options.removeProvisioning,
+					removeProvision: self._options.removeProvisioning,
 					completion: { _ in }
 				)
 				if !success {

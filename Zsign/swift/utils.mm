@@ -31,7 +31,12 @@ bool p12_password_check(NSString *file, NSString *pass) {
 		return false;
 	}
 	
-	OSSL_PROVIDER_load(NULL, "legacy");
+	// Loading a provider disables OpenSSL's automatic default-provider loading.
+	// Keep both available for old PKCS12 encryption and current digest algorithms.
+	static OSSL_PROVIDER *defaultProvider = OSSL_PROVIDER_load(NULL, "default");
+	static OSSL_PROVIDER *legacyProvider = OSSL_PROVIDER_load(NULL, "legacy");
+	(void)defaultProvider;
+	(void)legacyProvider;
 	
 	PKCS12 *p12 = d2i_PKCS12_bio(bio, NULL);
 	BIO_free(bio);
@@ -41,16 +46,10 @@ bool p12_password_check(NSString *file, NSString *pass) {
 		return false;
 	}
 	
-	if( PKCS12_verify_mac(p12, NULL, 0) ) {
-		return true;
-	} else if( PKCS12_verify_mac(p12, strPass.c_str(), -1) ) {
-		return true;
-	} else {
-		return false;
-	}
-	
+	const bool valid = PKCS12_verify_mac(p12, strPass.c_str(), -1) == 1 ||
+		(strPass.empty() && PKCS12_verify_mac(p12, NULL, 0) == 1);
 	PKCS12_free(p12);
-	return false;
+	return valid;
 }
 
 // This is fucking bullshit IMO.
@@ -66,9 +65,11 @@ void password_check_fix(NSString *path) {
 	string strProvisionData;
 	ZFile::ReadFile(strProvisionFile.c_str(), strProvisionData);
 	
-	BIO *in = BIO_new(BIO_s_mem());
-	OPENSSL_assert((size_t)BIO_write(in, strProvisionData.data(), (int)strProvisionData.size()) == strProvisionData.size());
-	d2i_CMS_bio(in, NULL);
+	BIO *in = BIO_new_mem_buf(strProvisionData.data(), (int)strProvisionData.size());
+	if (!in) return;
+	CMS_ContentInfo *cms = d2i_CMS_bio(in, NULL);
+	if (cms) CMS_ContentInfo_free(cms);
+	BIO_free(in);
 }
 
 void password_check_fix_free(NSString *path) {

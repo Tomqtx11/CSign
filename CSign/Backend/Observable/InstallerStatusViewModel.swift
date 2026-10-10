@@ -16,6 +16,7 @@ extension InstallerStatusViewModel {
 		case .ready: "app.gift"
 		case .sendingManifest, .sendingPayload: "paperplane.fill"
 		case .installing: "square.and.arrow.down"
+		case .awaitingConfirmation: "iphone"
 		case .completed: "app.badge.checkmark"
 		case .broken: "exclamationmark.triangle.fill"
 		}
@@ -28,6 +29,7 @@ extension InstallerStatusViewModel {
 		case .sendingManifest: .localized("Sending Manifest")
 		case .sendingPayload: .localized("Sending Payload")
 		case .installing: .localized("Installing")
+		case .awaitingConfirmation: "Đã gửi IPA · kiểm tra màn hình chính"
 		case .completed: .localized("Completed")
 		case .broken: .localized("Error")
 		}

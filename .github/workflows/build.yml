@@ -6,7 +6,15 @@ on:
   workflow_dispatch:
 
 jobs:
+  signing-regressions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test production signer and provisioning behavior
+        run: python3 -m unittest discover -s Tests -p 'test_*.py' -v
+
   build:
+    needs: signing-regressions
     runs-on: macos-latest
 
     steps:
@@ -24,6 +32,11 @@ jobs:
       - name: Prepare Build Environment
         run: |
           defaults write com.apple.dt.XCBuild IgnoreFileSystemDeviceInodeChanges -bool YES
+
+      - name: Test install links and progress lifecycle
+        run: |
+          swiftc CSign/Utilities/InstallationLinks.swift CSign/Utilities/InstallProgressTracker.swift CSign/Utilities/SigningProgress.swift Tests/RegressionTests.swift -o "$RUNNER_TEMP/csign-regressions"
+          "$RUNNER_TEMP/csign-regressions"
 
       - name: Xcode Cache
         uses: irgaly/xcode-cache@v1

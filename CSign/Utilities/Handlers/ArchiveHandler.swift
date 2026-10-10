@@ -13,18 +13,21 @@ import IDeviceSwift
 
 final class ArchiveHandler: NSObject {
 	private var _lastProgressTime: CFAbsoluteTime = 0
-	@ObservedObject var viewModel: InstallerStatusViewModel
+	let viewModel: InstallerStatusViewModel
 	
 	private let _fileManager = FileManager.default
 	private let _uuid = UUID().uuidString
 	private var _payloadUrl: URL?
 	
-	private var _app: AppInfoPresentable
+	private let _app: AppSnapshot
+	private let _sourceURL: URL?
 	private let _uniqueWorkDir: URL
 	
+	@MainActor
 	init(app: AppInfoPresentable, viewModel: InstallerStatusViewModel) {
 		self.viewModel = viewModel
-		self._app = app
+		self._app = AppSnapshot(app)
+		self._sourceURL = Storage.shared.getAppDirectory(for: app)
 		self._uniqueWorkDir = _fileManager.temporaryDirectory
 			.appendingPathComponent("CSignInstall_\(_uuid)", isDirectory: true)
 		
@@ -32,7 +35,7 @@ final class ArchiveHandler: NSObject {
 	}
 	
 	func move() async throws {
-		guard let appUrl = Storage.shared.getAppDirectory(for: _app) else {
+		guard let appUrl = _sourceURL else {
 			throw SigningFileHandlerError.appNotFound
 		}
 		
@@ -65,7 +68,7 @@ final class ArchiveHandler: NSObject {
                         compression: compression,
                         progress: { progress in
                             let currentTime = CFAbsoluteTimeGetCurrent()
-                            if progress == 1.0 || (currentTime - self._lastProgressTime > 0.05) {
+                            if progress == 1.0 || (currentTime - self._lastProgressTime > 0.1) {
                                 self._lastProgressTime = currentTime
                                 Task { @MainActor in
                                     self.viewModel.packageProgress = progress
@@ -82,10 +85,13 @@ final class ArchiveHandler: NSObject {
 	}
 	
 	func moveToArchive(_ package: URL, shouldOpen: Bool = false) async throws -> URL? {
-		let appendingString = "\(_app.name!)_\(_app.version!)_\(Int(Date().timeIntervalSince1970)).ipa"
+		let safeName = (_app.name ?? "App").replacingOccurrences(of: "/", with: "_")
+		let safeVersion = (_app.version ?? "1.0").replacingOccurrences(of: "/", with: "_")
+		let appendingString = "\(safeName)_\(safeVersion)_\(_uuid.prefix(8)).ipa"
 		let dest = _fileManager.archives.appendingPathComponent(appendingString)
 		
-		try? _fileManager.moveItem(
+		try _fileManager.createDirectoryIfNeeded(at: _fileManager.archives)
+		try _fileManager.moveItem(
 			at: package,
 			to: dest
 		)
@@ -99,6 +105,10 @@ final class ArchiveHandler: NSObject {
 		return dest
 	}
 	
+	func clean() {
+		try? _fileManager.removeItem(at: _uniqueWorkDir)
+	}
+
 	static func getCompressionLevel() -> Int {
 		if UserDefaults.standard.object(forKey: "CSign.compressionLevel") == nil {
 			return 2 // Default to DefaultCompression instead of NoCompression

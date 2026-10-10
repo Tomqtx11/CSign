@@ -9,9 +9,9 @@ import SwiftUI
 
 // MARK: - View
 struct AppearanceTintColorView: View {
-	@AppStorage("CSign.userTintColor") private var _selectedColorHex: String = "#848ef9"
+	@AppStorage("CSign.userTintColor") private var _selectedColorHex: String = CSignTheme.defaultTint
 	private let _tintOptions: [(name: String, hex: String)] = [
-		("Default", 		"#848ef9"),
+		("CSign Cyan", 	CSignTheme.defaultTint),
 		("V2", 				"#B496DC"),
 		("Berry",   		"#ff7a83"),
 		("Cool Blue", 		"#4161F1"),
@@ -64,7 +64,7 @@ struct AppearanceTintColorView: View {
 			}
 		}
 		.onChange(of: _selectedColorHex) { value in
-			UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: value))
+			UIApplication.topViewController()?.view.window?.tintColor = UIColor(CSignTheme.tint(value))
 		}
 	}
 }

@@ -14,6 +14,7 @@ extension InstallerStatusViewModel {
 		case sendingManifest
 		case sendingPayload
 		case installing
+		case awaitingConfirmation
 		case completed(Result<Void, Error>)
 		case broken(Error)
 	}
@@ -36,7 +37,7 @@ public class InstallerStatusViewModel: ObservableObject {
 	}
 	
 	public var isCompleted: Bool {
-		if case .completed = status {
+		if case .completed(.success) = status {
 			true
 		} else {
 			false

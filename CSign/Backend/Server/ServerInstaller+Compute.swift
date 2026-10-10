@@ -38,29 +38,18 @@ extension ServerInstaller {
 		return comps.url!
 	}
 	
-	var externalServerLink: String {
-		let baseUrl = "https://api.palera.in/genPlist?bundleid=\(app.identifier!)&name=\(app.name!)&version=\(app.version!)&fetchurl=\(self.payloadEndpoint.absoluteString)"
-		let encodedBaseUrl = baseUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
-		let finalEncodedUrl = encodedBaseUrl.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
-		
-		return finalEncodedUrl
-	}
-
-	var iTunesLink: String {
-		_iTunesLink(with: plistEndpoint.absoluteString)
-	}
-	
-	var iTunesLinkExternal: String {
-		_iTunesLink(with: externalServerLink)
-	}
-	
-	private func _iTunesLink(with url: String) -> String {
-		return "itms-services://?action=download-manifest&url=\(url)"
+	var installationURL: URL {
+		get throws {
+			let manifest = getServerMethod() == 1
+				? try InstallationLinks.externalManifest(payload: payloadEndpoint, identifier: app.identifier, name: app.name, version: app.version)
+				: plistEndpoint
+			return InstallationLinks.installer(manifest: manifest)
+		}
 	}
 
 	var displayImageSmallEndpoint: URL {
 		var comps = URLComponents()
-		comps.scheme = "https"
+		comps.scheme = self.getServerMethod() == 1 ? "http" : "https"
 		comps.host = sni()
 		comps.path = "/app57x57.png"
 		comps.port = port
@@ -69,7 +58,7 @@ extension ServerInstaller {
 
 	var displayImageLargeEndpoint: URL {
 		var comps = URLComponents()
-		comps.scheme = "https"
+		comps.scheme = self.getServerMethod() == 1 ? "http" : "https"
 		comps.host = sni()
 		comps.path = "/app512x512.png"
 		comps.port = port
@@ -94,10 +83,15 @@ extension ServerInstaller {
 	}
 
 	var html: String {
-		"""
-		<html style="background-color: black;">
-		<script type="text/javascript">window.location="\(iTunesLinkExternal)"</script>
-		</html>
+		guard let url = try? installationURL,
+			let encoded = try? JSONSerialization.data(withJSONObject: [url.absoluteString]),
+			let javascriptURL = String(data: encoded, encoding: .utf8)
+		else { return "<html><body>Thông tin cài đặt không hợp lệ.</body></html>" }
+		return """
+		<html><meta name="viewport" content="width=device-width, initial-scale=1"><body>
+		<p>Đang mở trình cài đặt…</p>
+		<script>window.location.href=\(javascriptURL)[0];</script>
+		</body></html>
 		"""
 	}
 
@@ -118,10 +112,10 @@ extension ServerInstaller {
 				],
 			],
 			"metadata": [
-				"bundle-identifier": app.identifier,
-				"bundle-version": app.version,
+				"bundle-identifier": app.identifier ?? "",
+				"bundle-version": app.version ?? "1.0",
 				"kind": "software",
-				"title": app.name,
+				"title": app.name ?? app.identifier ?? "Ứng dụng",
 			],
 		],],
 	]}

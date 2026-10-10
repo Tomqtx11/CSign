@@ -24,6 +24,8 @@ struct SigningView: View {
 	@State var appIcon: UIImage?
 	@State private var _signError: Error?
 	@State private var _signFinished = false
+	@State private var _signedApp: Signed?
+	@State private var _installAction: AnyApp?
 	
 	// MARK: Fetch
 	@FetchRequest(
@@ -55,6 +57,9 @@ struct SigningView: View {
 	var body: some View {
 		NBNavigationView("", displayMode: .inline) {
 			Form {
+				CSignBrandCard(subtitle: "Chọn chứng chỉ, ký và cài đặt.")
+					.listRowBackground(Color.clear)
+					.listRowInsets(EdgeInsets())
 				_customizationOptions(for: app)
 				_cert()
 				
@@ -134,25 +139,24 @@ struct SigningView: View {
 					appIcon = nil
 				}
 			}
-			.fullScreenCover(isPresented: $_isSigning) {
-				SigningLogView(app: app, options: _temporaryOptions, error: _signError) {
-					// On Dismiss callback
-					_isSigning = false
-					if _signError == nil && _signFinished && !LogCapture.shared.isCancelled {
-						let successFeedback = UINotificationFeedbackGenerator()
-						successFeedback.notificationOccurred(.success)
-						if _temporaryOptions.post_deleteAppAfterSigned, !app.isSigned {
-							Storage.shared.deleteApp(for: app)
-						}
-						if _temporaryOptions.post_installAppAfterSigned {
-							DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-								NotificationCenter.default.post(name: Notification.Name("CSign.installApp"), object: nil)
-							}
-						}
-						dismiss()
+			.sheet(isPresented: $_isSigning, onDismiss: {
+				if _signFinished && _signError == nil { dismiss() }
+			}) {
+				Group {
+					if let action = _installAction {
+						InstallPreviewView(app: action.base, isSharing: action.archive)
+					} else {
+						SigningProgressView(
+							app: app, options: _temporaryOptions, error: _signError, finished: _signFinished,
+							onClose: { _isSigning = false },
+							onInstall: { if let signed = _signedApp { _installAction = AnyApp(base: signed) } },
+							onExport: { if let signed = _signedApp { _installAction = AnyApp(base: signed, archive: true) } }
+						)
 					}
 				}
-				.interactiveDismissDisabled(true)
+				.presentationDetents([.height(340)])
+				.presentationDragIndicator(.visible)
+				.interactiveDismissDisabled(!_signFinished)
 			}
 			.sheet(isPresented: $_isAltPickerPresenting) { SigningAlternativeIconView(app: app, appIcon: $appIcon, isModifing: .constant(true)) }
 			.sheet(isPresented: $_isFilePickerPresenting) {
@@ -176,7 +180,6 @@ struct SigningView: View {
 					}
 				}
 			}
-			.disabled(_isSigning)
 			.animation(.smooth, value: _isSigning)
 		}
 		.onAppear {
@@ -351,22 +354,47 @@ extension SigningView {
 			return
 		}
 
+		guard SigningProgress.shared.start() else {
+			UIAlertController.showAlertWithOk(title: "Đang ký", message: "Hãy chờ tác vụ ký hiện tại hoàn tất.")
+			return
+		}
 		let generator = UIImpactFeedbackGenerator(style: .medium)
 		generator.impactOccurred()
 		_signError = nil
 		_signFinished = false
 		_isSigning = true
-		LogCapture.shared.start()
+		_signedApp = nil
+		_installAction = nil
 		
 		FR.signPackageFile(
 			app,
 			using: _temporaryOptions,
 			icon: appIcon,
 			certificate: _selectedCert()
-		) { error in
-			LogCapture.shared.stop()
-			_signError = error
+		) { result in
+			switch result {
+			case .failure(let error):
+				_signError = error
+			case .success(let uuid):
+				let request = Signed.fetchRequest()
+				request.predicate = NSPredicate(format: "uuid == %@", uuid)
+				_signedApp = (try? Storage.shared.context.fetch(request))?.first
+				guard let signed = _signedApp else {
+					_signError = SigningFileHandlerError.appNotFound
+					_signFinished = true
+					SigningProgress.shared.finish(error: _signError)
+					return
+				}
+				UINotificationFeedbackGenerator().notificationOccurred(.success)
+				if _temporaryOptions.post_deleteAppAfterSigned, !app.isSigned {
+					Storage.shared.deleteApp(for: app)
+				}
+				if _temporaryOptions.post_installAppAfterSigned, _temporaryOptions.signingOption != .onlyModify {
+					_installAction = AnyApp(base: signed)
+				}
+			}
 			_signFinished = true
+			SigningProgress.shared.finish(error: _signError)
 		}
 	}
 }

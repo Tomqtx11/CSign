@@ -73,7 +73,7 @@ struct FRAppIconView: View {
 	@Environment(\.colorScheme) private var colorScheme
 	@StateObject private var loader = FRAppIconLoader()
 	
-	@AppStorage("CSign.userTintColor") private var selectedColorHex: String = "#848ef9"
+	@AppStorage("CSign.userTintColor") private var selectedColorHex: String = CSignTheme.defaultTint
 	@AppStorage("CSign.shouldTintIcons") private var shouldTintIcons: Bool = false
 	@AppStorage("CSign.shouldChangeIconsBasedOffStyle") private var shouldChangeIconsBasedOffStyle: Bool = false
 	

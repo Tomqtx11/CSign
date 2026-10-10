@@ -58,14 +58,14 @@ extension UIApplication {
 			let workspace = workspaceClass.perform(NSSelectorFromString(defaultSelector))?.takeUnretainedValue()
 		else { return nil }
 
-		let result = workspace.perform(
-			NSSelectorFromString(progressSelector),
-			with: identifier,
-			with: synchronous
-		)?.takeUnretainedValue()
-
-		if let number = result as? Progress {
-			return number.fractionCompleted
+		guard let object = workspace as? NSObject else { return nil }
+		let selector = NSSelectorFromString(progressSelector)
+		guard object.responds(to: selector), let implementation = object.method(for: selector) else { return nil }
+		typealias ProgressFunction = @convention(c) (AnyObject, Selector, NSString, Bool) -> Unmanaged<AnyObject>?
+		let function = unsafeBitCast(implementation, to: ProgressFunction.self)
+		// The second argument is an Objective-C BOOL, not a boxed Swift object.
+		if let progress = function(object, selector, identifier as NSString, synchronous)?.takeUnretainedValue() as? Progress {
+			return progress.fractionCompleted
 		}
 
 		return nil

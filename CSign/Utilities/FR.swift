@@ -44,7 +44,7 @@ enum FR {
 				
 				// Post notification
 				let content = UNMutableNotificationContent()
-				content.title = .localized("Cài Đặt Hoàn Tất")
+				content.title = .localized("Nhập ứng dụng hoàn tất")
 				content.body = .localized("Ứng dụng đã được thêm vào thư viện thành công.")
 				content.sound = .default
 				let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
@@ -64,67 +64,49 @@ enum FR {
 		}
 	}
 	
+	@MainActor
 	static func signPackageFile(
 		_ app: AppInfoPresentable,
 		using options: Options,
 		icon: UIImage?,
 		certificate: CertificatePair?,
-		completion: @escaping (Error?) -> Void
+		completion: @escaping (Result<String, Error>) -> Void
 	) {
-		var bgTask: UIBackgroundTaskIdentifier = .invalid
-		bgTask = UIApplication.shared.beginBackgroundTask {
-			UIApplication.shared.endBackgroundTask(bgTask)
-			bgTask = .invalid
+		// Core Data values and paths must be captured before leaving the main queue.
+		let snapshot = AppSnapshot(app)
+		let handler = SigningHandler(app: snapshot, sourceURL: Storage.shared.getAppDirectory(for: app), options: options)
+		handler.appCertificate = certificate
+		handler.signingIdentity = certificate.map(SigningIdentity.init)
+		handler.appIcon = icon
+		var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+		backgroundTask = UIApplication.shared.beginBackgroundTask {
+			SigningProgress.shared.cancel()
+			if backgroundTask != .invalid {
+				UIApplication.shared.endBackgroundTask(backgroundTask)
+				backgroundTask = .invalid
+			}
 		}
-		
-		Task.detached {
-			let handler = SigningHandler(app: app, options: options)
-			handler.appCertificate = certificate
-			handler.appIcon = icon
-			
+
+		Task.detached(priority: .userInitiated) {
+			let result: Result<String, Error>
 			do {
 				try await handler.copy()
-				
-				// Check cancel between major steps
-				if LogCapture.isCancelledSync {
-					try? await handler.clean()
-					await MainActor.run { 
-						completion(SigningFileHandlerError.cancelled) 
-						UIApplication.shared.endBackgroundTask(bgTask)
-					}
-					return
-				}
-				
 				try await handler.modify()
-				
-				if LogCapture.isCancelledSync {
-					try? await handler.clean()
-					await MainActor.run { 
-						completion(SigningFileHandlerError.cancelled) 
-						UIApplication.shared.endBackgroundTask(bgTask)
-					}
-					return
-				}
-				
-				try? await handler.clean()
-				
-				// Post notification
-				let content = UNMutableNotificationContent()
-				content.title = .localized("Ký Ứng Dụng Hoàn Tất")
-				content.body = .localized("Ứng dụng \(app.name ?? "") đã được ký thành công.")
-				content.sound = .default
-				let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-				try? await UNUserNotificationCenter.current().add(request)
-				
-				await MainActor.run {
-					completion(nil)
-					UIApplication.shared.endBackgroundTask(bgTask)
-				}
+				result = .success(handler.signedAppUUID)
+				let title = options.signingOption == .onlyModify ? "Tuỳ chỉnh hoàn tất" : "Ký ứng dụng hoàn tất"
+				AppNotifications.post(title: title, body: "\(options.appName ?? snapshot.name ?? "Ứng dụng") đã được lưu vào thư viện.")
 			} catch {
-				try? await handler.clean()
-				await MainActor.run {
-					completion(error)
-					UIApplication.shared.endBackgroundTask(bgTask)
+				result = .failure(error)
+				if !SigningProgress.cancellationRequested {
+					AppNotifications.post(title: "Không thể ký ứng dụng", body: error.localizedDescription)
+				}
+			}
+			try? await handler.clean()
+			await MainActor.run {
+				completion(result)
+				if backgroundTask != .invalid {
+					UIApplication.shared.endBackgroundTask(backgroundTask)
+					backgroundTask = .invalid
 				}
 			}
 		}

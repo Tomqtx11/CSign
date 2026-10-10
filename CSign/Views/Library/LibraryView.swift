@@ -72,6 +72,9 @@ struct LibraryView: View {
 	var body: some View {
 		NBNavigationView(.localized("Library")) {
 			NBListAdaptable {
+				CSignBrandCard(isWorking: true)
+					.listRowSeparator(.hidden)
+					.listRowBackground(Color.clear)
 				if !_filteredImportedApps.isEmpty {
 					NBSection(
 						.localized("Imported"),
@@ -164,7 +167,7 @@ struct LibraryView: View {
 			}
 			.sheet(item: $_selectedInstallAppPresenting) { app in
 				InstallPreviewView(app: app.base, isSharing: app.archive)
-					.presentationDetents([.height(200)])
+					.presentationDetents([.height(340)])
 					.presentationDragIndicator(.visible)
 			}
 			.fullScreenCover(item: $_selectedSigningAppPresenting) { app in
@@ -197,11 +200,6 @@ struct LibraryView: View {
 					if let url = URL(string: _alertDownloadString) {
 						_ = downloadManager.startDownload(from: url, id: "CSignManualDownload_\(UUID().uuidString)")
 					}
-				}
-			}
-			.onReceive(NotificationCenter.default.publisher(for: Notification.Name("CSign.installApp"))) { _ in
-				if let latest = _signedApps.first {
-					_selectedInstallAppPresenting = AnyApp(base: latest)
 				}
 			}
 			.onChange(of: _editMode) { mode in

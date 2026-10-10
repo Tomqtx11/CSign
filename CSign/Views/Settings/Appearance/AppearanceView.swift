@@ -29,15 +29,16 @@ struct AppearanceView: View {
 	]
 	
 	@AppStorage("CSign.userTintColor")
-	private var _selectedColorHex: String = "#848ef9"
+	private var _selectedColorHex: String = CSignTheme.defaultTint
 	
 	private var _tintColorBinding: Binding<Color> {
 		Binding(
-			get: { Color(hex: _selectedColorHex) },
+			get: { CSignTheme.tint(_selectedColorHex) },
 			set: { _selectedColorHex = $0.toHex() }
 		)
 	}
 	
+	@AppStorage("CSign.playfulAnimations") private var _playfulAnimations = true
 	@State private var showingIconAlert = false
 	@State private var _currentIcon: String = UIApplication.shared.alternateIconName ?? "Default"
 	private let _appIcons: [(name: String, image: String)] = [
@@ -58,6 +59,12 @@ struct AppearanceView: View {
 				.pickerStyle(.segmented)
 			}
 			
+			Section {
+				Toggle("Hoạt ảnh vui nhộn", isOn: $_playfulAnimations)
+			} footer: {
+				Text("Tự tắt khi bật Giảm chuyển động hoặc Chế độ nguồn điện thấp.")
+			}
+
 			NBSection(.localized("Theme")) {
 				AppearanceTintColorView()
 					.listRowInsets(EdgeInsets())

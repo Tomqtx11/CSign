@@ -57,8 +57,12 @@
 	<array>
 		<string>localdevvpn</string>
 	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>CSign dùng mạng cục bộ để gửi IPA đã ký tới trình cài đặt trên thiết bị.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
 		<key>NSExceptionDomains</key>
 		<dict>
 			<key>claration.dev</key>

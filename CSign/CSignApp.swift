@@ -25,6 +25,7 @@ struct CSignApp: App {
 	@State private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
 	// Track if this is the very first render so disclaimer shows immediately
 	@State private var _hasRendered = false
+	@AppStorage("CSign.userTintColor") private var _themeColor = CSignTheme.defaultTint
 
 	var body: some Scene {
 		WindowGroup {
@@ -57,7 +58,7 @@ struct CSignApp: App {
 							UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
 						}
 						
-						UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "CSign.userTintColor") ?? "#848ef9"))
+						UIApplication.topViewController()?.view.window?.tintColor = UIColor(CSignTheme.tint(_themeColor))
 					}
 					.onChange(of: scenePhase) { newPhase in
 						if newPhase == .background {
@@ -76,6 +77,7 @@ struct CSignApp: App {
 					}
 				}
 			}
+			.tint(CSignTheme.tint(_themeColor))
 			.animation(.easeInOut(duration: 0.35), value: hasAcceptedDisclaimer)
 		}
 	}
@@ -174,11 +176,12 @@ struct CSignApp: App {
 	}
 }
 
-class AppDelegate: NSObject, UIApplicationDelegate {
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 	func application(
 		_ application: UIApplication,
 		didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
 	) -> Bool {
+		UNUserNotificationCenter.current().delegate = self
 		UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
 		_createPipeline()
 		_createDocumentsDirectories()
@@ -188,6 +191,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		return true
 	}
 	
+	func userNotificationCenter(
+		_ center: UNUserNotificationCenter,
+		willPresent notification: UNNotification,
+		withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+	) {
+		completionHandler([.banner, .list, .sound])
+	}
+
 	private func _createPipeline() {
 		DataLoader.sharedUrlCache.diskCapacity = 0
 		
