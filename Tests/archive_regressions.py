@@ -16,7 +16,7 @@ with tempfile.TemporaryDirectory(prefix="csign-archive-test-") as directory:
     sources.mkdir(parents=True)
     (work / "Package.swift").write_text('''// swift-tools-version: 5.8
 import PackageDescription
-let package = Package(name: "ArchiveRegression", products: [.executable(name: "Harness", targets: ["Harness"])],
+let package = Package(name: "ArchiveRegression", platforms: [.macOS(.v12)], products: [.executable(name: "Harness", targets: ["Harness"])],
     dependencies: [.package(url: "https://github.com/marmelroy/Zip", exact: "2.1.2")],
     targets: [.executableTarget(name: "Harness", dependencies: [.product(name: "Zip", package: "Zip")])])
 ''')

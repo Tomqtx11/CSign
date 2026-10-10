@@ -25,7 +25,7 @@ class ServerInstaller: Identifiable, ObservableObject {
 	let app: AppSnapshot
 	private let _serverMethod: Int
 	private let _ipFix: Bool
-	@ObservedObject var viewModel: InstallerStatusViewModel
+	let viewModel: InstallerStatusViewModel
 	private var _server: Application?
 
 	init(app: AppInfoPresentable, viewModel: InstallerStatusViewModel) {

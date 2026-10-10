@@ -167,26 +167,32 @@ struct InstallPreviewView: View {
 			viewModel.status = .broken(InstallationError.couldNotOpenInstaller)
 			return
 		}
+		let app = self.app
+		let method = installationMethod
+		let server = installer
+		let model = viewModel
+		let sharing = isSharing
+		let shareSheet = useShareSheet
 		workTask = Task.detached(priority: .userInitiated) {
-			let handler = await ArchiveHandler(app: app, viewModel: viewModel)
+			let handler = await ArchiveHandler(app: app, viewModel: model)
 			do {
 				try Task.checkCancellation()
 				try await handler.prepare()
 				try Task.checkCancellation()
 				// Installing needs a fast container, not a second compression pass.
-				let package = try await handler.archive(forceNoCompression: !isSharing)
+				let package = try await handler.archive(forceNoCompression: !sharing)
 				try Task.checkCancellation()
-				if isSharing {
-					let share = await useShareSheet
+				if sharing {
+					let share = shareSheet
 					let exported = try await handler.moveToArchive(package, shouldOpen: !share)
 					handler.clean()
 					await MainActor.run {
 						dismiss()
 						if share, let exported { UIActivityViewController.show(activityItems: [exported]) }
 					}
-				} else if installationMethod == 0 {
-					installer.packageUrl = package
-					try installer.start()
+				} else if method == 0 {
+					server.packageUrl = package
+					try server.start()
 					try Task.checkCancellation()
 					try await MainActor.run {
 						try Task.checkCancellation()
@@ -194,13 +200,13 @@ struct InstallPreviewView: View {
 						archiveHandler = handler
 						viewModel.status = .ready
 					}
-				} else if installationMethod == 1 {
-					let proxy = InstallationProxy(viewModel: viewModel)
+				} else if method == 1 {
+					let proxy = InstallationProxy(viewModel: model)
 					try await proxy.install(at: package, suspend: app.identifier == Bundle.main.bundleIdentifier)
 					handler.clean()
 				} else { throw InstallationError.invalidServerMethod }
 			} catch {
-				installer.shutdown()
+				server.shutdown()
 				handler.clean()
 				if !Task.isCancelled {
 					await MainActor.run { viewModel.status = .broken(error) }
