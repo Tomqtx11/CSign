@@ -4,6 +4,8 @@ import Foundation
 struct RegressionTests {
 	@MainActor
 	static func main() async throws {
+		let safariPage = InstallationLinks.safariPage(port: 4321)
+		precondition(safariPage.absoluteString == "http://127.0.0.1:4321/install", "Safari must load its page on this device, independently of Wi-Fi/cellular IP selection")
 		let payload = URL(string: "http://127.0.0.1:4321/Payload.ipa?key=a+b&part=1")!
 		let appName = "CSign & Friends + Tiếng Việt #1 <\"Test\">"
 		let manifest = try InstallationLinks.externalManifest(payload: payload, identifier: "com.example.test", name: appName, version: "1.2+3")
@@ -33,6 +35,9 @@ struct RegressionTests {
 		let decodedHref = String(page[hrefRange]).replacingOccurrences(of: "&amp;", with: "&")
 		precondition(URL(string: decodedHref) == installer, "Safari's visible install link must preserve the complete nested manifest URL")
 		precondition(page.contains(">Cài đặt</a>"), "Safari needs a visible install action even when automatic redirects are blocked")
+		if let output = ProcessInfo.processInfo.environment["CSIGN_INSTALL_PAGE_OUTPUT"] {
+			try page.write(toFile: output, atomically: true, encoding: .utf8)
+		}
 		do {
 			_ = try InstallationLinks.externalManifest(payload: payload, identifier: nil, name: nil, version: nil)
 			preconditionFailure("Missing bundle identifier must fail")

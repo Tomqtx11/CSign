@@ -9,7 +9,8 @@
 - URL manifest máy chủ ngoài không mã hoá riêng từng tham số. Nay giữ đúng tên có dấu, `&`, `+`, `#` và URL lồng nhau.
 - Liên kết iOS từng tạo thành `itms-services:?…`; nay giữ đúng `itms-services://?action=download-manifest&url=…` theo [tài liệu Apple](https://support.apple.com/guide/deployment/depce7cefc4d/web), có regression kiểm tra cả dấu `//`.
 - Máy chủ manifest nội suy giá trị query trực tiếp vào XML. Kiểm tra endpoint thực cho thấy tên chứa `&` tạo plist lỗi; nay escape XML trước khi mã hoá query, giữ đúng tên và URL tải khi iOS đọc plist.
-- Trang Safari có nút Cài đặt thực thay cho chuyển hướng JavaScript phụ thuộc iOS cho phép. Khi mở trực tiếp bị từ chối, không có yêu cầu manifest sau 8 giây hoặc khởi động HTTPS thất bại, chuyển sang máy chủ HTTP/Safari và manifest HTTPS qua `api.palera.in`; dùng lại IPA đã đóng gói. Cần Internet cho manifest máy chủ ngoài. Không dừng máy chủ chỉ vì màn cài đặt bị Safari che; chỉ dọn khi đóng sheet cài.
+- Trang Safari mở qua `http://127.0.0.1:<port>/install`, không phụ thuộc IP Wi-Fi/4G. Safari được present bằng UIKit sau khi presenter xuất hiện, thay vì nhúng controller Safari vào hierarchy SwiftUI theo [hướng dẫn Apple](https://developer.apple.com/documentation/safariservices/sfsafariviewcontroller). Sau khi trang tải xong, tự gọi trình cài một lần; nút Cài đặt vẫn hiện nếu iOS chặn chuyển hướng tự động. Delegate nhận kết quả tải; nếu thất bại hoặc chờ 15 giây chưa tải được thì hiện lỗi và nút Thử lại Safari, dùng lại IPA đã đóng gói.
+- Khi mở trực tiếp bị từ chối, không có yêu cầu manifest sau 8 giây hoặc khởi động HTTPS thất bại, chuyển sang máy chủ HTTP/Safari và manifest HTTPS qua `api.palera.in`. Cần Internet cho manifest máy chủ ngoài. Không dừng máy chủ chỉ vì màn cài đặt bị Safari che; chỉ dọn khi đóng sheet cài.
 - Dò cài đặt mỗi 1 ms và coi tiến độ biến mất là thành công. Nay dò mỗi 500 ms, truyền đúng kiểu Objective-C BOOL và yêu cầu xác nhận trên màn hình chính nếu iOS không trả kết quả cuối.
 - Đóng gói nay đọc trực tiếp bundle vào `Payload/` bằng minizip đã có sẵn, không sao chép thêm cả app sang thư mục staging. Đọc theo khối 256 KiB; giữ quyền thực thi và symlink; kiểm tra lỗi ghi và xoá archive dở dang. Cài đặt dùng ZIP không nén, xuất IPA giữ mức nén người dùng chọn.
 - Cài qua pairing từng đọc toàn bộ IPA vào RAM và giữ con trỏ ngoài `withUnsafeBytes`. Nay gửi từng khối 1 MiB trong phạm vi con trỏ hợp lệ.
@@ -27,7 +28,7 @@ Kiểm tra chạy bộ ký C++ thực với chứng chỉ thử được tạo t
 
 GitHub Actions kiểm tra archive thực (CRC, cấu trúc Payload, tệp ẩn, quyền thực thi, symlink, tên có dấu, mức nén và giữ nguyên bản gốc) bằng `python3 Tests/archive_regressions.py`.
 
-GitHub Actions còn biên dịch/chạy kiểm tra Swift cho mã hoá URL, tiến độ thiếu/timeout, huỷ an toàn và ngăn hai tác vụ ký đồng thời; sau đó build IPA Release trên macOS.
+GitHub Actions còn biên dịch/chạy kiểm tra Swift cho URL trang Safari loopback, mã hoá URL, tiến độ thiếu/timeout, huỷ an toàn và ngăn hai tác vụ ký đồng thời. Node chạy JavaScript trong HTML do Swift thật sinh ra để kiểm tra tự mở sau tải, chỉ mở một lần, giữ URL manifest lồng nhau và xử lý chuyển hướng bị chặn; sau đó build IPA Release trên macOS.
 
 ## Kiểm tra trên iPhone
 

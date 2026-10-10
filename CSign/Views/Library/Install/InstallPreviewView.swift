@@ -9,6 +9,8 @@ struct InstallPreviewView: View {
 	@State private var workTask: Task<Void, Never>?
 	@State private var progressTask: Task<Void, Never>?
 	@State private var promptTask: Task<Void, Never>?
+	@State private var safariLoadTask: Task<Void, Never>?
+	@State private var safariLoadFailed = false
 	@State private var fallbackInstaller: ServerInstaller?
 	@State private var isPreparingFallback = false
 	@State private var archiveHandler: ArchiveHandler?
@@ -61,6 +63,13 @@ struct InstallPreviewView: View {
 					.font(.caption).foregroundStyle(.secondary)
 			}
 			HStack {
+				if safariLoadFailed {
+					Button("Thử lại Safari") {
+						safariLoadFailed = false
+						sentCompletionNotice = false
+						viewModel.status = .ready
+					}.buttonStyle(.borderedProminent)
+				}
 				if viewModel.isCompleted || needsConfirmation {
 					Button("Mở ứng dụng") { UIApplication.openApp(with: app.identifier ?? "") }
 						.buttonStyle(.borderedProminent)
@@ -79,10 +88,13 @@ struct InstallPreviewView: View {
 		.padding(24)
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.background(CSignTheme.gradient.opacity(0.05))
-		.sheet(isPresented: $isWebviewPresenting) {
-			SafariRepresentableView(url: activeInstaller.pageEndpoint, onDismiss: {
+		.sheet(isPresented: $isWebviewPresenting, onDismiss: {
+			safariLoadTask?.cancel()
+		}) {
+			InstallationSafariView(url: activeInstaller.pageEndpoint, onDismiss: {
+				safariLoadTask?.cancel()
 				isWebviewPresenting = false
-			}).ignoresSafeArea()
+			}, onInitialLoad: handleSafariLoad).ignoresSafeArea()
 		}
 		.onReceive(viewModel.$status, perform: handleStatus)
 		.onAppear {
@@ -101,6 +113,7 @@ struct InstallPreviewView: View {
 			workTask?.cancel()
 			progressTask?.cancel()
 			promptTask?.cancel()
+			safariLoadTask?.cancel()
 			progressTask = nil
 			let server = activeInstaller
 			let handler = archiveHandler
@@ -137,7 +150,17 @@ struct InstallPreviewView: View {
 	private func openInstaller() {
 		guard isVisible, !isPreparingFallback else { return }
 		if activeInstaller.getServerMethod() == 1 {
+			#if !targetEnvironment(macCatalyst)
+			BackgroundAudioManager.shared.start()
+			#endif
 			isWebviewPresenting = true
+			safariLoadTask?.cancel()
+			safariLoadTask = Task {
+				do { try await Task.sleep(nanoseconds: 15_000_000_000) }
+				catch { return }
+				guard isVisible, isWebviewPresenting else { return }
+				handleSafariLoad(false)
+			}
 		} else {
 			do {
 				let url = try activeInstaller.installationURL
@@ -157,6 +180,14 @@ struct InstallPreviewView: View {
 				}
 			} catch { viewModel.status = .broken(error) }
 		}
+	}
+
+	private func handleSafariLoad(_ success: Bool) {
+		safariLoadTask?.cancel()
+		guard !success, isVisible, isWebviewPresenting else { return }
+		safariLoadFailed = true
+		isWebviewPresenting = false
+		viewModel.status = .broken(InstallationError.couldNotLoadInstallPage)
 	}
 
 	private func useSafariFallback() {
@@ -198,6 +229,7 @@ struct InstallPreviewView: View {
 			if !isSharing && installationMethod == 0 { openInstaller() }
 		case .sendingPayload:
 			promptTask?.cancel()
+			safariLoadTask?.cancel()
 			isWebviewPresenting = false
 		case .sendingManifest:
 			promptTask?.cancel()

@@ -30,6 +30,9 @@ extension ServerInstaller {
 	}
 	
 	var pageEndpoint: URL {
+		// Safari runs on this iPhone. A Wi-Fi/cellular address can be unreachable
+		// or change while loading, so the install page always uses loopback.
+		if getServerMethod() == 1 { return InstallationLinks.safariPage(port: port) }
 		var comps = URLComponents()
 		comps.scheme = self.getServerMethod() == 1 ? "http" : "https"
 		comps.host = sni()
@@ -85,7 +88,7 @@ extension ServerInstaller {
 	var html: String {
 		guard let url = try? installationURL
 		else { return "<html><body>Thông tin cài đặt không hợp lệ.</body></html>" }
-		// Safari may block a custom-scheme redirect without a user gesture.
+		// Keep a visible action if Safari blocks automatic custom-scheme navigation.
 		return InstallationLinks.installPage(installer: url)
 	}
 

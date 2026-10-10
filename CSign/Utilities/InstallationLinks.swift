@@ -4,6 +4,7 @@ enum InstallationError: Error, LocalizedError {
 	case invalidMetadata
 	case missingTLS
 	case couldNotOpenInstaller
+	case couldNotLoadInstallPage
 	case invalidServerMethod
 
 	var errorDescription: String? {
@@ -11,12 +12,22 @@ enum InstallationError: Error, LocalizedError {
 		case .invalidMetadata: return "Ứng dụng thiếu Bundle ID hoặc thông tin cài đặt hợp lệ. Hãy nhập và ký lại IPA."
 		case .missingTLS: return "Thiếu chứng chỉ HTTPS cài đặt. Hãy cập nhật SSL trong Cài đặt hoặc chọn phương thức máy chủ ngoài."
 		case .couldNotOpenInstaller: return "iOS không mở được trình cài đặt. Hãy kiểm tra phương thức cài trong Cài đặt."
+		case .couldNotLoadInstallPage: return "Safari không tải được trang cài đặt trên iPhone. Hãy thử mở lại Safari; gói đã ký vẫn được giữ để cài lại."
 		case .invalidServerMethod: return "Phương thức cài đặt không hợp lệ. Hãy chọn lại trong Cài đặt."
 		}
 	}
 }
 
 enum InstallationLinks {
+	static func safariPage(port: Int) -> URL {
+		var components = URLComponents()
+		components.scheme = "http"
+		components.host = "127.0.0.1"
+		components.port = port
+		components.path = "/install"
+		return components.url!
+	}
+
 	static func externalManifest(payload: URL, identifier: String?, name: String?, version: String?) throws -> URL {
 		guard let identifier, !identifier.isEmpty else { throw InstallationError.invalidMetadata }
 		var components = URLComponents(string: "https://api.palera.in/genPlist")!
@@ -63,9 +74,17 @@ enum InstallationLinks {
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<style>body{font:17px -apple-system,sans-serif;text-align:center;padding:36px 20px;color:#15414a;background:#f4fbfc}a{display:inline-block;background:#008aa6;color:white;padding:16px 28px;border-radius:18px;text-decoration:none}p{line-height:1.5}</style>
 		<title>Cài đặt ứng dụng</title></head><body>
-		<h2>Ứng dụng đã sẵn sàng</h2><p>Bấm Cài đặt, rồi xác nhận thông báo của iOS.</p>
+		<h2>Ứng dụng đã sẵn sàng</h2><p>Đang mở trình cài đặt. Nếu chưa hiện thông báo, bấm Cài đặt bên dưới.</p>
 		<a id="install" href="\(href)">Cài đặt</a>
 		<p>Giữ CSign mở cho đến khi iPhone tải xong gói cài đặt.</p>
+		<script>
+		window.addEventListener("load", function () {
+		  setTimeout(function () {
+		    try { window.location.href = document.getElementById("install").href; }
+		    catch (error) { /* Keep the visible link if automatic navigation is blocked. */ }
+		  }, 300);
+		}, { once: true });
+		</script>
 		</body></html>
 		"""
 	}
