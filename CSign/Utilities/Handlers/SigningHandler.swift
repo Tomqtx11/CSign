@@ -160,9 +160,6 @@ final class SigningHandler: NSObject {
 			
 			try await handler.sign()
 			SigningProgress.update(phase: .signing, subProgress: 1.0)
-		} else if _options.signingOption == .adhoc {
-			SigningProgress.update(phase: .signing)
-			try await handler.adhocSign()
 		} else if _options.signingOption != .onlyModify {
 			throw SigningFileHandlerError.missingCertifcate
 		}
