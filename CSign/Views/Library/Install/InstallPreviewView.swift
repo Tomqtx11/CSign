@@ -80,7 +80,9 @@ struct InstallPreviewView: View {
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.background(CSignTheme.gradient.opacity(0.05))
 		.sheet(isPresented: $isWebviewPresenting) {
-			SafariRepresentableView(url: activeInstaller.pageEndpoint).ignoresSafeArea()
+			SafariRepresentableView(url: activeInstaller.pageEndpoint, onDismiss: {
+				isWebviewPresenting = false
+			}).ignoresSafeArea()
 		}
 		.onReceive(viewModel.$status, perform: handleStatus)
 		.onAppear {
