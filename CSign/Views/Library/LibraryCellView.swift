@@ -61,7 +61,8 @@ struct LibraryCellView: View {
 				_buttonActions(for: app)
 			}
 		}
-		.padding(isRegular ? 12 : 10)
+		.padding(.horizontal, isRegular ? 12 : 10)
+		.padding(.vertical, isRegular ? 8 : 6)
 		.background(
 			RoundedRectangle(cornerRadius: 18, style: .continuous)
 				.fill(isSelected && isEditing ? Color.accentColor.opacity(0.1) : CSignTheme.cyan.opacity(0.035))
@@ -73,6 +74,7 @@ struct LibraryCellView: View {
 				.allowsHitTesting(false)
 		}
 		.listRowSeparator(.hidden)
+		.listRowInsets(EdgeInsets(top: 3, leading: 16, bottom: 3, trailing: 16))
 		.contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 		.onTapGesture {
 			if isEditing {
