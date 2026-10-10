@@ -54,7 +54,7 @@ extension ServerInstaller {
 		
 		if getServerMethod() == 1 {
 			return !self.getIPFix()
-				? (Self.getLocalAddress() ?? localhost)
+				? localAddress()
 				: localhost
 		} else {
 			return readCommonName() ?? localhost

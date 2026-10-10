@@ -35,12 +35,15 @@ jobs:
 
       - name: Test install links and progress lifecycle
         run: |
-          swiftc CSign/Utilities/InstallationLinks.swift CSign/Utilities/InstallProgressTracker.swift CSign/Utilities/SigningProgress.swift Tests/RegressionTests.swift -o "$RUNNER_TEMP/csign-regressions"
+          swiftc CSign/Utilities/InstallationLinks.swift CSign/Utilities/InstallProgressTracker.swift CSign/Utilities/PayloadTransferTracker.swift CSign/Utilities/SigningProgress.swift Tests/RegressionTests.swift -o "$RUNNER_TEMP/csign-regressions"
           CSIGN_INSTALL_PAGE_OUTPUT="$RUNNER_TEMP/csign-install-page.html" "$RUNNER_TEMP/csign-regressions"
           node Tests/installation_page_regressions.js "$RUNNER_TEMP/csign-install-page.html"
 
       - name: Test IPA packaging and bundle preservation
         run: python3 Tests/archive_regressions.py
+
+      - name: Test production IPA HTTP download and resume
+        run: python3 Tests/server_regressions.py
 
       - name: Xcode Cache
         uses: irgaly/xcode-cache@v1

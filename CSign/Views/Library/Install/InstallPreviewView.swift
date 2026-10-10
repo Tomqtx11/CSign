@@ -16,6 +16,7 @@ struct InstallPreviewView: View {
 	@State private var archiveHandler: ArchiveHandler?
 	@State private var didStart = false
 	@State private var sentCompletionNotice = false
+	@State private var sentPayloadNotice = false
 	@State private var isVisible = false
 
 	let app: AppSnapshot
@@ -49,6 +50,10 @@ struct InstallPreviewView: View {
 			Label(viewModel.statusLabel, systemImage: viewModel.statusImage).font(.subheadline)
 			if case .none = viewModel.status {
 				Text("Đóng gói: \(Int(viewModel.packageProgress * 100))%")
+					.font(.caption).foregroundStyle(.secondary)
+			}
+			if case .sendingPayload = viewModel.status {
+				Text("Đã gửi IPA: \(Int(viewModel.uploadProgress * 100))%")
 					.font(.caption).foregroundStyle(.secondary)
 			}
 			if case .broken(let error) = viewModel.status {
@@ -196,7 +201,7 @@ struct InstallPreviewView: View {
 		promptTask?.cancel()
 		isPreparingFallback = true
 		let original = activeInstaller
-		let replacement = ServerInstaller(app: app, viewModel: viewModel, serverMethod: 1)
+		let replacement = ServerInstaller(app: app, viewModel: viewModel, serverMethod: 1, useLoopback: true)
 		fallbackInstaller = replacement
 		workTask = Task.detached(priority: .userInitiated) {
 			original.shutdown()
@@ -230,15 +235,21 @@ struct InstallPreviewView: View {
 		case .sendingPayload:
 			promptTask?.cancel()
 			safariLoadTask?.cancel()
-			isWebviewPresenting = false
+			if installationMethod == 0, progressTask == nil, let identifier = app.identifier {
+				progressTask = pollInstallation(identifier)
+			}
 		case .sendingManifest:
 			promptTask?.cancel()
 		case .installing:
-			if installationMethod == 0, progressTask == nil, let identifier = app.identifier {
-				AppNotifications.post(title: "Đã gửi gói cài đặt", body: "iOS đang xử lý \(app.name ?? identifier).")
-				progressTask = pollInstallation(identifier)
+			if installationMethod == 0, let identifier = app.identifier {
+				if !sentPayloadNotice {
+					sentPayloadNotice = true
+					AppNotifications.post(title: "Đã gửi gói cài đặt", body: "iOS đang xử lý \(app.name ?? identifier).")
+				}
+				if progressTask == nil { progressTask = pollInstallation(identifier) }
 			}
 		case .completed(let result):
+			isWebviewPresenting = false
 			promptTask?.cancel()
 			progressTask?.cancel()
 			progressTask = nil
@@ -262,6 +273,7 @@ struct InstallPreviewView: View {
 				AppNotifications.post(title: isSharing ? "Không thể xuất IPA" : "Không thể cài đặt", body: error.localizedDescription)
 			}
 		case .awaitingConfirmation:
+			isWebviewPresenting = false
 			stopBackgroundAudio()
 		default: break
 		}
@@ -304,7 +316,7 @@ struct InstallPreviewView: View {
 						server.shutdown()
 						// Expired/missing local TLS must not strand a signed package.
 						startedServer = await MainActor.run {
-							ServerInstaller(app: app, viewModel: model, serverMethod: 1)
+							ServerInstaller(app: app, viewModel: model, serverMethod: 1, useLoopback: true)
 						}
 						startedServer.packageUrl = package
 						try startedServer.start()
@@ -336,17 +348,33 @@ struct InstallPreviewView: View {
 	private func pollInstallation(_ identifier: String) -> Task<Void, Never> {
 		Task {
 			var tracker = InstallProgressTracker()
+			var lastUpload = viewModel.uploadProgress
+			var lastUploadAt = Date()
 			while !Task.isCancelled {
+				if viewModel.uploadProgress > lastUpload {
+					lastUpload = viewModel.uploadProgress
+					lastUploadAt = Date()
+				}
+				if viewModel.uploadProgress < 1, Date().timeIntervalSince(lastUploadAt) >= 60 {
+					safariLoadFailed = true
+					isWebviewPresenting = false
+					viewModel.status = .broken(InstallationError.payloadInterrupted)
+					return
+				}
 				let update = tracker.update(UIApplication.installProgress(for: identifier, makeSynchronous: false))
 				switch update {
 				case .waiting: break
 				case .progress(let value): viewModel.installProgress = value
 				case .completed:
-					viewModel.status = .completed(.success(()))
-					return
+					if viewModel.uploadProgress >= 1 {
+						viewModel.status = .completed(.success(()))
+						return
+					}
 				case .needsConfirmation:
-					viewModel.status = .awaitingConfirmation
-					return
+					if viewModel.uploadProgress >= 1 {
+						viewModel.status = .awaitingConfirmation
+						return
+					}
 				}
 				do { try await Task.sleep(nanoseconds: 500_000_000) }
 				catch { return }

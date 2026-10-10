@@ -6,6 +6,19 @@ struct RegressionTests {
 	static func main() async throws {
 		let safariPage = InstallationLinks.safariPage(port: 4321)
 		precondition(safariPage.absoluteString == "http://127.0.0.1:4321/install", "Safari must load its page on this device, independently of Wi-Fi/cellular IP selection")
+		let transfer = PayloadTransferTracker(size: 1000)
+		precondition(PayloadTransferTracker.requestedRange(nil, size: 1000) == 0..<1000)
+		precondition(PayloadTransferTracker.requestedRange("bytes=100-199", size: 1000) == 100..<200)
+		precondition(PayloadTransferTracker.requestedRange("bytes=-100", size: 1000) == 900..<1000)
+		precondition(PayloadTransferTracker.requestedRange("bytes=900-", size: 1000) == 900..<1000)
+		precondition(PayloadTransferTracker.requestedRange("bytes=900-9999", size: 1000) == 900..<1000)
+		for invalid in ["bytes=1000-", "bytes=2-1", "bytes=-0", "bytes=0-1,2-3", "other=0-1"] {
+			precondition(PayloadTransferTracker.requestedRange(invalid, size: 1000) == nil)
+		}
+		precondition(!transfer.record(0..<100).isComplete)
+		precondition(transfer.record(50..<200).bytes == 200, "Overlapping probes must not double count")
+		precondition(!transfer.record(900..<1000).isComplete, "A ZIP tail probe does not download the whole IPA")
+		precondition(transfer.record(200..<900).isComplete)
 		let payload = URL(string: "http://127.0.0.1:4321/Payload.ipa?key=a+b&part=1")!
 		let appName = "CSign & Friends + Tiếng Việt #1 <\"Test\">"
 		let manifest = try InstallationLinks.externalManifest(payload: payload, identifier: "com.example.test", name: appName, version: "1.2+3")

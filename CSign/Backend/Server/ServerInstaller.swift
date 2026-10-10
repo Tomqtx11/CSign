@@ -25,13 +25,16 @@ class ServerInstaller: Identifiable, ObservableObject {
 	let app: AppSnapshot
 	private let _serverMethod: Int
 	private let _ipFix: Bool
+	private let _localAddress: String
+	private var _payloadTracker: PayloadTransferTracker?
 	let viewModel: InstallerStatusViewModel
 	private var _server: Application?
 
-	init(app: AppInfoPresentable, viewModel: InstallerStatusViewModel, serverMethod: Int? = nil) {
+	init(app: AppInfoPresentable, viewModel: InstallerStatusViewModel, serverMethod: Int? = nil, useLoopback: Bool? = nil) {
 		self.app = AppSnapshot(app)
 		self._serverMethod = serverMethod ?? UserDefaults.standard.integer(forKey: "CSign.serverMethod")
-		self._ipFix = UserDefaults.standard.bool(forKey: "CSign.ipFix")
+		self._ipFix = useLoopback ?? (UserDefaults.standard.object(forKey: "CSign.ipFix") as? Bool ?? true)
+		self._localAddress = Self.getLocalAddress() ?? "127.0.0.1"
 		self.viewModel = viewModel
 	}
 
@@ -40,6 +43,9 @@ class ServerInstaller: Identifiable, ObservableObject {
 		defer { _lifecycleLock.unlock() }
 		guard app.identifier?.isEmpty == false else { throw InstallationError.invalidMetadata }
 		guard (0...1).contains(_serverMethod) else { throw InstallationError.invalidServerMethod }
+		guard let packageUrl, let size = try FileManager.default.attributesOfItem(atPath: packageUrl.path)[.size] as? NSNumber,
+			size.int64Value > 0 else { throw InstallationError.invalidMetadata }
+		_payloadTracker = PayloadTransferTracker(size: size.int64Value)
 		try _setup()
 		_needsShutdown = true
 		try _configureRoutes()
@@ -72,23 +78,19 @@ class ServerInstaller: Identifiable, ObservableObject {
 					"Content-Type": "image/png",
 				], body: .init(data: displayImageLargeData))
 			case payloadEndpoint.path:
-				guard let packageUrl = packageUrl else {
+				guard let packageUrl = packageUrl, let tracker = _payloadTracker else {
 					return Response(status: .notFound)
 				}
 				
-				self._updateStatus(.sendingPayload)
-				
-				return req.fileio.streamFile(
-					at: packageUrl.path
-				) { result in
-					switch result {
-					case .success:
-						self._updateStatus(.installing)
-					case .failure(let error):
-						self._updateStatus(.broken(error))
-					}
-
-				}
+				return InstallationPayload.response(to: req, file: packageUrl, tracker: tracker,
+					onStarted: { self._updateStatus(.sendingPayload) },
+					onProgress: { progress in
+						DispatchQueue.main.async { self.viewModel.uploadProgress = progress.fraction }
+					},
+					onCompleted: { progress in
+						DispatchQueue.main.async { self.viewModel.uploadProgress = progress.fraction }
+						if progress.isComplete { self._updateStatus(.installing) }
+					})
 			case "/install":
 				var headers = HTTPHeaders()
 				headers.add(name: .contentType, value: "text/html")
@@ -134,4 +136,6 @@ class ServerInstaller: Identifiable, ObservableObject {
 	func getIPFix() -> Bool {
 		_ipFix
 	}
+
+	func localAddress() -> String { _localAddress }
 }

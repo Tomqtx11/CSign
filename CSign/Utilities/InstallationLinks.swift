@@ -5,6 +5,7 @@ enum InstallationError: Error, LocalizedError {
 	case missingTLS
 	case couldNotOpenInstaller
 	case couldNotLoadInstallPage
+	case payloadInterrupted
 	case invalidServerMethod
 
 	var errorDescription: String? {
@@ -13,6 +14,7 @@ enum InstallationError: Error, LocalizedError {
 		case .missingTLS: return "Thiếu chứng chỉ HTTPS cài đặt. Hãy cập nhật SSL trong Cài đặt hoặc chọn phương thức máy chủ ngoài."
 		case .couldNotOpenInstaller: return "iOS không mở được trình cài đặt. Hãy kiểm tra phương thức cài trong Cài đặt."
 		case .couldNotLoadInstallPage: return "Safari không tải được trang cài đặt trên iPhone. Hãy thử mở lại Safari; gói đã ký vẫn được giữ để cài lại."
+		case .payloadInterrupted: return "iOS chưa nhận đủ IPA hoặc đã dừng tải. Giữ CSign mở và bấm Thử lại Safari để gửi lại gói đã ký."
 		case .invalidServerMethod: return "Phương thức cài đặt không hợp lệ. Hãy chọn lại trong Cài đặt."
 		}
 	}

@@ -11,6 +11,9 @@
 - Máy chủ manifest nội suy giá trị query trực tiếp vào XML. Kiểm tra endpoint thực cho thấy tên chứa `&` tạo plist lỗi; nay escape XML trước khi mã hoá query, giữ đúng tên và URL tải khi iOS đọc plist.
 - Trang Safari mở qua `http://127.0.0.1:<port>/install`, không phụ thuộc IP Wi-Fi/4G. Safari được present bằng UIKit sau khi presenter xuất hiện, thay vì nhúng controller Safari vào hierarchy SwiftUI theo [hướng dẫn Apple](https://developer.apple.com/documentation/safariservices/sfsafariviewcontroller). Sau khi trang tải xong, tự gọi trình cài một lần; nút Cài đặt vẫn hiện nếu iOS chặn chuyển hướng tự động. Delegate nhận kết quả tải; nếu thất bại hoặc chờ 15 giây chưa tải được thì hiện lỗi và nút Thử lại Safari, dùng lại IPA đã đóng gói.
 - Khi mở trực tiếp bị từ chối, không có yêu cầu manifest sau 8 giây hoặc khởi động HTTPS thất bại, chuyển sang máy chủ HTTP/Safari và manifest HTTPS qua `api.palera.in`. Cần Internet cho manifest máy chủ ngoài. Không dừng máy chủ chỉ vì màn cài đặt bị Safari che; chỉ dọn khi đóng sheet cài.
+- Đường Safari dự phòng dùng `127.0.0.1` cho cả trang và URL IPA; mặc định bật Chỉ dùng localhost cho cài Safari. Nếu người dùng đã chọn địa chỉ LAN, giữ lựa chọn đó và chụp địa chỉ một lần để URL không thay đổi giữa manifest và yêu cầu tải.
+- Endpoint IPA tách HEAD khỏi GET: HEAD chỉ trả kích thước, không báo đã gửi/cài. GET hỗ trợ Range, đọc theo khối 256 KiB với backpressure, đếm byte gửi thành công và gộp các khoảng chồng nhau. Chỉ chuyển sang iOS xử lý sau khi đã gửi toàn bộ IPA; lỗi ngắt một yêu cầu vẫn cho phép iOS tải tiếp. Safari không tự đóng ngay khi nhận yêu cầu đầu tiên. Dò kết quả từ khi có tải thực và không báo hoàn tất trước khi gửi đủ IPA; sau 60 giây không thêm byte thì hiện lỗi và cho thử lại gói đã đóng.
+- Audio giữ nền được tạo một lần và tái sử dụng; gọi start khi đang chạy không thêm source node mới.
 - Dò cài đặt mỗi 1 ms và coi tiến độ biến mất là thành công. Nay dò mỗi 500 ms, truyền đúng kiểu Objective-C BOOL và yêu cầu xác nhận trên màn hình chính nếu iOS không trả kết quả cuối.
 - Đóng gói nay đọc trực tiếp bundle vào `Payload/` bằng minizip đã có sẵn, không sao chép thêm cả app sang thư mục staging. Đọc theo khối 256 KiB; giữ quyền thực thi và symlink; kiểm tra lỗi ghi và xoá archive dở dang. Cài đặt dùng ZIP không nén, xuất IPA giữ mức nén người dùng chọn.
 - Cài qua pairing từng đọc toàn bộ IPA vào RAM và giữ con trỏ ngoài `withUnsafeBytes`. Nay gửi từng khối 1 MiB trong phạm vi con trỏ hợp lệ.
@@ -27,6 +30,8 @@ python3 -m unittest discover -s Tests -p 'test_*.py' -v
 Kiểm tra chạy bộ ký C++ thực với chứng chỉ thử được tạo tạm và Mach-O fixture: giữ profile cùng hash resource, xoá profile khi chọn xoá, và từ chối mật khẩu sai. Chứng chỉ thử không phải chứng chỉ Apple và không được dùng để cài lên iPhone.
 
 GitHub Actions kiểm tra archive thực (CRC, cấu trúc Payload, tệp ẩn, quyền thực thi, symlink, tên có dấu, mức nén và giữ nguyên bản gốc) bằng `python3 Tests/archive_regressions.py`.
+
+`python3 Tests/server_regressions.py` build endpoint IPA sản xuất với đúng Vapor 4.104.0, khởi động HTTP thật trên loopback và kiểm tra HEAD, Range đầu/cuối/chồng nhau, tiếp tục tải, Range lỗi, tệp không tồn tại và GET toàn bộ. IPA tải được phải trùng SHA-256 và vượt kiểm tra CRC; các yêu cầu thăm dò không được báo đã gửi đủ.
 
 GitHub Actions còn biên dịch/chạy kiểm tra Swift cho URL trang Safari loopback, mã hoá URL, tiến độ thiếu/timeout, huỷ an toàn và ngăn hai tác vụ ký đồng thời. Node chạy JavaScript trong HTML do Swift thật sinh ra để kiểm tra tự mở sau tải, chỉ mở một lần, giữ URL manifest lồng nhau và xử lý chuyển hướng bị chặn; sau đó build IPA Release trên macOS.
 

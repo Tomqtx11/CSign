@@ -48,7 +48,7 @@ extension ServerView {
 
 // MARK: - View
 struct ServerView: View {
-	@AppStorage("CSign.ipFix") private var _ipFix: Bool = false
+	@AppStorage("CSign.ipFix") private var _ipFix: Bool = true
 	@AppStorage("CSign.serverMethod") private var _serverMethod: Int = 0
 	private let _serverMethods: [String] = [.localized("Fully Local"), .localized("Semi Local")]
 	
