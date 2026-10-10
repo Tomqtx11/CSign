@@ -4,8 +4,11 @@ import Foundation
 /// Stream an app directly into Payload/, preserving Unix modes and symbolic links.
 /// Uses the minizip code already linked by Zip; no extra runtime dependency.
 enum IPAArchiveWriter {
-	static func write(app: URL, to output: URL, compressionLevel: Int32,
+	static func write(app source: URL, to output: URL, compressionLevel: Int32,
 					  progress: (Double) -> Void = { _ in }) throws {
+		// iOS and macOS may expose /var through /private/var during enumeration.
+		// Resolve the bundle root once; do not resolve symbolic links inside it.
+		let app = source.resolvingSymlinksInPath().standardizedFileURL
 		let manager = FileManager.default
 		let keys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey]
 		var enumerationError: Error?
