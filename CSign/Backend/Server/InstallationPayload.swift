@@ -26,7 +26,7 @@ enum InstallationPayload {
 		}
 		guard let range = PayloadTransferTracker.requestedRange(request.headers.first(name: .range), size: tracker.size) else {
 			headers.replaceOrAdd(name: .contentRange, value: "bytes */\(tracker.size)")
-			return Response(status: .requestedRangeNotSatisfiable, headers: headers)
+			return Response(status: .rangeNotSatisfiable, headers: headers)
 		}
 		let partial = request.headers.contains(name: .range)
 		if partial {
