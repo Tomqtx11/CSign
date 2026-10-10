@@ -122,3 +122,10 @@ extension Storage {
 		return (try? context.fetch(fetchRequest)) ?? []
 	}
 }
+
+// Normalize the legacy label without changing saved nicknames or certificate data.
+extension CertificatePair {
+	var displayNickname: String? {
+		nickname == "PersonalCert" ? "Certificate" : nickname
+	}
+}

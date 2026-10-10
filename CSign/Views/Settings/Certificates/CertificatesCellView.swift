@@ -28,8 +28,7 @@ struct CertificatesCellView: View {
 
 		VStack(spacing: 6) {
 			let title = {
-				let nickname = cert.nickname == "PersonalCert" ? "Certificate" : cert.nickname
-				var title = nickname ?? data?.Name ?? .localized("Unknown")
+				var title = cert.displayNickname ?? data?.Name ?? .localized("Unknown")
 				
 				if let getTaskAllow = data?.Entitlements?["get-task-allow"]?.value as? Bool, getTaskAllow == true {
 					title = "🐞 \(title)"

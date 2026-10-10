@@ -265,7 +265,7 @@ enum FR {
 				var title: String
 				let decoded = Storage.shared.getProvisionFileDecoded(for: cert)
 				
-				title = cert.nickname ?? decoded?.Name ?? .localized("Unknown")
+				title = cert.displayNickname ?? decoded?.Name ?? .localized("Unknown")
 				
 				if let getTaskAllow = decoded?.Entitlements?["get-task-allow"]?.value as? Bool, getTaskAllow == true {
 					title = "🐞 \(title)"

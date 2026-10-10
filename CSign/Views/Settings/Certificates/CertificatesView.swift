@@ -141,7 +141,7 @@ extension CertificatesView {
 			_isSelectedInfoPresenting = cert
 		}
 		Button(.localized("Change Nickname"), systemImage: "pencil") {
-			_newNickname = cert.nickname ?? ""
+			_newNickname = cert.displayNickname ?? ""
 			_certToRename = cert
 			_isRenamingPresenting = true
 		}
