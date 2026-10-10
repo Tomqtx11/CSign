@@ -24,8 +24,14 @@ let package = Package(name: "ArchiveRegression", platforms: [.macOS(.v12)], prod
     (sources / "main.swift").write_text('''import Foundation
 let args = CommandLine.arguments
 var values: [Double] = []
-try IPAArchiveWriter.write(app: URL(fileURLWithPath: args[1]), to: URL(fileURLWithPath: args[2]),
-    compressionLevel: Int32(args[3])!) { values.append($0) }
+do {
+    try IPAArchiveWriter.write(app: URL(fileURLWithPath: args[1]), to: URL(fileURLWithPath: args[2]),
+        compressionLevel: Int32(args[3])!) { values.append($0) }
+} catch {
+    let message = "Archive error: " + String(describing: (error as NSError).userInfo) + "\\n"
+    FileHandle.standardError.write(Data(message.utf8))
+    exit(1)
+}
 precondition(values.first == 0 && values.last == 1)
 precondition(zip(values, values.dropFirst()).allSatisfy { $0.0 <= $0.1 })
 ''')

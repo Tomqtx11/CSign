@@ -18,8 +18,8 @@ enum IPAArchiveWriter {
 		}) else { throw CocoaError(.fileReadNoSuchFile) }
 		let files = [app] + enumerator.allObjects.compactMap { $0 as? URL }
 		if let enumerationError { throw enumerationError }
-		let prefix = app.path + "/"
-		let root = "Payload/" + app.lastPathComponent
+		let rootComponents = app.pathComponents.map { $0.precomposedStringWithCanonicalMapping }
+		let root = "Payload/" + app.lastPathComponent.precomposedStringWithCanonicalMapping
 		var total: Int64 = 0
 		for file in files {
 			let values = try file.resourceValues(forKeys: keys)
@@ -43,8 +43,11 @@ enum IPAArchiveWriter {
 			let attributes = try manager.attributesOfItem(atPath: file.path)
 			var entry = root
 			if file != app {
-				guard file.path.hasPrefix(prefix) else { throw CocoaError(.fileReadInvalidFileName) }
-				entry += "/" + file.path.dropFirst(prefix.count)
+				let components = file.standardizedFileURL.pathComponents
+				guard components.prefix(rootComponents.count).map({ $0.precomposedStringWithCanonicalMapping }) == rootComponents else {
+					throw CocoaError(.fileReadInvalidFileName, userInfo: [NSFilePathErrorKey: file.path, "BundleRoot": app.path])
+				}
+				entry += "/" + components.dropFirst(rootComponents.count).joined(separator: "/")
 			}
 			if directory { entry += "/" }
 			var info = zip_fileinfo()
