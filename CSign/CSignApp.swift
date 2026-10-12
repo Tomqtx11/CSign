@@ -249,6 +249,12 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 			}
 		}
 		
+		let khoAppUrlStr = "https://raw.githubusercontent.com/Tomqtx11/kho-app-ipa/main/repo.json"
+		if let url = URL(string: khoAppUrlStr),
+			!Storage.shared.getSources().contains(where: { $0.sourceURL?.absoluteString == khoAppUrlStr }) {
+			Storage.shared.addSource(url, name: "Kho App IPA", identifier: url.absoluteString, iconURL: URL(string: "https://i.imgur.com/0qP4rvM.jpeg")) { _ in }
+		}
+		
 		let unwantedUrlStr = "https://raw.githubusercontent.com/Tomqtx11/CSign/main/app-repo.json"
 		if let unwanted = Storage.shared.getSources().first(where: { $0.sourceURL?.absoluteString == unwantedUrlStr }) {
 			Storage.shared.deleteSource(for: unwanted)
