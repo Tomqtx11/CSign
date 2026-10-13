@@ -38,8 +38,10 @@ struct ExperienceState: Codable, Equatable {
 
     static func favoriteKey(sourceURL: URL, appIdentifier: String) -> String {
         var parts = URLComponents(url: sourceURL, resolvingAgainstBaseURL: false)
-        parts?.scheme = parts?.scheme?.lowercased()
-        parts?.host = parts?.host?.lowercased()
+        let scheme = parts?.scheme?.lowercased()
+        let host = parts?.host?.lowercased()
+        parts?.scheme = scheme
+        parts?.host = host
         parts?.fragment = nil
         let url = parts?.url?.absoluteString ?? sourceURL.absoluteString
         return url + "\u{1F}" + appIdentifier
