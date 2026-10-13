@@ -9,7 +9,7 @@ import SwiftUI
 import NimbleViews
 
 struct TabbarView: View {
-	@State private var selectedTab: TabEnum = .sources
+	@AppStorage("CSign.activeTab") private var selectedTab = TabEnum.today.rawValue
 
 	var body: some View {
 		TabView(selection: $selectedTab) {
@@ -18,8 +18,11 @@ struct TabbarView: View {
 					.tabItem {
 						Label(tab.title, systemImage: tab.icon)
 					}
-					.tag(tab)
+					.tag(tab.rawValue)
 			}
 		}
+        .onAppear {
+            if !TabEnum.defaultTabs.contains(where: { $0.rawValue == selectedTab }) { selectedTab = TabEnum.today.rawValue }
+        }
 	}
 }

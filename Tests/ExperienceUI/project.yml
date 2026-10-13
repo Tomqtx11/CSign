@@ -1,0 +1,23 @@
+name: ExperienceUI
+options:
+  deploymentTarget:
+    iOS: '16.0'
+targets:
+  ExperienceUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - ExperienceUITests.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: xyz.certios.CSignExperienceUITests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+schemes:
+  ExperienceUI:
+    build:
+      targets:
+        ExperienceUITests: all
+    test:
+      targets:
+        - ExperienceUITests

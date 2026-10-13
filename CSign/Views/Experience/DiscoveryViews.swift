@@ -1,0 +1,239 @@
+import SwiftUI
+import NukeUI
+
+struct DiscoveryAppRow: View {
+    let item: DiscoveryApp
+    @ObservedObject private var experience = ExperienceStore.shared
+    var body: some View {
+        HStack(spacing: 12) {
+            ExperienceAppIcon(url: item.app.iconURL)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.app.currentName).font(.headline).lineLimit(1)
+                Text(item.repository.name ?? "Nguồn IPA").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                if experience.hasUpdate(item) {
+                    Label("Có bản mới", systemImage: "sparkles").font(.caption).foregroundStyle(CSignTheme.pink)
+                } else if let version = item.app.currentVersion {
+                    Text("v\(version)").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 0)
+            if experience.isFavorite(item) {
+                Image(systemName: "heart.fill").foregroundStyle(CSignTheme.pink).accessibilityLabel("Đã yêu thích")
+            }
+        }
+        .padding(.vertical, 3)
+    }
+}
+
+struct ExperienceAppIcon: View {
+    let url: URL?
+    var size: CGFloat = 48
+    var body: some View {
+        LazyImage(url: url) { state in
+            if let image = state.image {
+                image.resizable().scaledToFit()
+            } else {
+                Image(systemName: "app.fill").resizable().scaledToFit().foregroundStyle(CSignTheme.cyan).padding(9)
+            }
+        }
+        .frame(width: size, height: size)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 11))
+        .clipShape(RoundedRectangle(cornerRadius: 11))
+        .accessibilityHidden(true)
+    }
+}
+
+struct WeeklyPicksSection: View {
+    @ObservedObject private var experience = ExperienceStore.shared
+    @ObservedObject private var sources = SourcesViewModel.shared
+    private var catalog: [String: DiscoveryApp] {
+        Dictionary(experience.catalog(sources.sources, matching: Set(experience.weekly?.picks.map(\.id) ?? [])).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+    var body: some View {
+        Section {
+            if let weekly = experience.weekly {
+                let items = catalog
+                ForEach(weekly.picks) { pick in
+                    if let item = items[pick.id] {
+                        NavigationLink {
+                            SourceAppsDetailView(sourceURL: item.sourceURL, source: item.repository, app: item.app)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 8) {
+                                DiscoveryAppRow(item: item)
+                                Text(pick.caption).font(.subheadline).foregroundStyle(.secondary)
+                            }
+                            .padding(.vertical, 5)
+                        }
+                    }
+                }
+                if !weekly.picks.contains(where: { items[$0.id] != nil }) {
+                    Text(sources.isFinished ? "Các lựa chọn sẽ hiện khi nguồn chứa ứng dụng được tải thành công." : "Đang tải các lựa chọn từ nguồn…")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+            }
+        } header: {
+            Label(experience.weekly?.title ?? "App đáng thử tuần này", systemImage: "sparkles")
+        } footer: {
+            if let weekly = experience.weekly {
+                Text(weekly.edition + " · CSign tuyển chọn")
+            }
+        }
+    }
+}
+
+struct FavoritesView: View {
+    @ObservedObject private var experience = ExperienceStore.shared
+    @ObservedObject private var sources = SourcesViewModel.shared
+    @State private var search = ""
+    @FetchRequest(entity: AltSource.entity(), sortDescriptors: []) private var repositories: FetchedResults<AltSource>
+    private var catalog: [String: DiscoveryApp] {
+        Dictionary(experience.catalog(sources.sources, matching: Set(experience.state.favorites.map(\.id))).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+    private var favorites: [FavoriteApp] {
+        experience.state.favorites.filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) }
+    }
+    var body: some View {
+        List {
+            if experience.state.favorites.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "heart.circle").font(.system(size: 48)).foregroundStyle(CSignTheme.pink)
+                    Text("Bộ sưu tập của bạn bắt đầu ở đây").font(.headline)
+                    Text("Mở một ứng dụng trong IPA Mod và bấm tim để lưu. Khi làm mới nguồn, CSign sẽ đối chiếu phiên bản của các ứng dụng bạn theo dõi.")
+                        .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                }.frame(maxWidth: .infinity).padding(.vertical, 28)
+            } else if favorites.isEmpty {
+                Text("Không tìm thấy ứng dụng yêu thích phù hợp.").foregroundStyle(.secondary)
+            } else {
+                let items = catalog
+                ForEach(favorites) { favorite in
+                    Group {
+                        if let item = items[favorite.id] {
+                            NavigationLink {
+                                SourceAppsDetailView(sourceURL: item.sourceURL, source: item.repository, app: item.app)
+                            } label: { DiscoveryAppRow(item: item) }
+                        } else {
+                            HStack(spacing: 12) {
+                                ExperienceAppIcon(url: favorite.iconURL)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(favorite.name).font(.headline)
+                                    Text("Nguồn chưa tải hoặc ứng dụng tạm không có trong nguồn")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                    .swipeActions {
+                        Button("Bỏ yêu thích", role: .destructive) { experience.remove(favorite) }
+                    }
+                    .contextMenu {
+                        Button("Bỏ yêu thích", systemImage: "heart.slash", role: .destructive) { experience.remove(favorite) }
+                    }
+                }
+            }
+        }
+        .navigationTitle("Yêu thích")
+        .searchable(text: $search)
+        .task { await sources.fetchSources(repositories) }
+        .refreshable { await sources.fetchSources(repositories, refresh: true) }
+    }
+}
+
+struct MissionsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("CSign.playfulAnimations") private var animations = true
+    @AppStorage("CSign.activeTab") private var activeTab = TabEnum.today.rawValue
+    @State private var showingCertificates = false
+    @State private var inspecting: ExperienceMission?
+    @ObservedObject private var experience = ExperienceStore.shared
+    @FetchRequest(entity: CertificatePair.entity(), sortDescriptors: []) private var certificates: FetchedResults<CertificatePair>
+    @FetchRequest(entity: Signed.entity(), sortDescriptors: []) private var signedApps: FetchedResults<Signed>
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                VStack(spacing: 14) {
+                    CSignMascotView(mood: experience.state.rewardUnlocked ? .celebrating : .idle, lively: true)
+                        .scaleEffect(1.7).frame(height: 86)
+                    Text(experience.state.rewardUnlocked ? "Nhà khám phá CSign" : "Hành trình của bạn").font(.title2.bold())
+                    Text("\(experience.state.completedMissions.count) / 4 huy hiệu đã nhận").foregroundStyle(.secondary)
+                    ProgressView(value: Double(experience.state.completedMissions.count), total: 4).tint(CSignTheme.cyan)
+                    Text("Mở khóa từng huy hiệu bằng thao tác thật. Bấm huy hiệu để xem điều kiện hoặc đeo cho linh vật.")
+                        .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                }.frame(maxWidth: .infinity).experienceCard()
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 140))], spacing: 14) {
+                    ForEach(ExperienceMission.allCases, id: \.rawValue) { mission in
+                        Button { inspecting = mission } label: {
+                            VStack(spacing: 14) {
+                                ExperienceBadge(mission: mission, unlocked: experience.state.completedMissions.contains(mission), equipped: experience.state.equippedBadge == mission)
+                                Text(mission.title).font(.caption).foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center).frame(minHeight: 34)
+                            }.frame(maxWidth: .infinity).experienceCard()
+                        }.buttonStyle(.plain).accessibilityIdentifier("experience.badge." + mission.rawValue)
+                    }
+                }
+                if experience.state.rewardUnlocked {
+                    Label("Đã hoàn thành hành trình • Nhà khám phá CSign", systemImage: "crown.fill")
+                        .font(.headline).foregroundStyle(CSignTheme.pink).frame(maxWidth: .infinity, alignment: .leading).experienceCard()
+                }
+                VStack(alignment: .leading, spacing: 16) {
+                    ExperienceSectionHeading(title: "Tiếp tục hành trình", subtitle: "Mỗi thao tác đều đưa bạn đến một mốc mới", symbol: "map")
+                    Button("Khám phá kho IPA →") { activeTab = TabEnum.sources.rawValue; dismiss() }
+                    NavigationLink("Lưu ứng dụng yêu thích →") { FavoritesView() }
+                    Button("Thêm hoặc chọn chứng chỉ →") { showingCertificates = true }
+                    Button("Mở thư viện để ký IPA →") { activeTab = TabEnum.library.rawValue; dismiss() }
+                }.frame(maxWidth: .infinity, alignment: .leading).experienceCard()
+            }.padding(16).frame(maxWidth: 820).frame(maxWidth: .infinity)
+        }.background(Color(uiColor: .systemGroupedBackground))
+        .navigationTitle("Tủ huy hiệu")
+        .sheet(isPresented: $showingCertificates) {
+            NavigationStack {
+                CertificatesView().navigationTitle("Chứng chỉ")
+                    .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Đóng") { showingCertificates = false } } }
+            }
+        }
+        .sheet(item: $inspecting) { badge in badgeSheet(badge) }
+        .onAppear { recordProgress() }
+        .onChange(of: certificates.count) { _ in recordProgress() }
+        .onChange(of: signedApps.count) { _ in recordProgress() }
+    }
+    private func recordProgress() {
+        if !certificates.isEmpty { experience.complete(.certificate) }
+        experience.recordExistingSignatures(Array(signedApps))
+    }
+    private func badgeSheet(_ badge: ExperienceMission) -> some View {
+        let unlocked = experience.state.completedMissions.contains(badge)
+        return ScrollView {
+            VStack(spacing: 22) {
+            ExperienceBadge(mission: badge, unlocked: unlocked, equipped: experience.state.equippedBadge == badge)
+                .scaleEffect(1.3).frame(height: 150)
+            Text(badge.title).font(.title3.bold()).multilineTextAlignment(.center)
+            Text(unlocked ? "Bạn đã nhận được huy hiệu này. Đeo huy hiệu để linh vật ở Trang Chủ mang dấu ấn của bạn." : "Hoàn thành thao tác này để nhận huy hiệu. Tiến độ sẽ được giữ trên thiết bị khi bạn đóng app.")
+                .foregroundStyle(.secondary).multilineTextAlignment(.center)
+            if unlocked {
+                Button(experience.state.equippedBadge == badge ? "Tháo huy hiệu" : "Đeo cho linh vật") {
+                    withAnimation(animations && !reduceMotion ? .spring(response: 0.3) : nil) {
+                        experience.equip(experience.state.equippedBadge == badge ? nil : badge)
+                    }
+                    inspecting = nil
+                }.buttonStyle(.borderedProminent).controlSize(.large)
+            }
+            Button("Đóng") { inspecting = nil }
+            }.padding(28).frame(maxWidth: .infinity)
+        }.presentationDetents([.large]).presentationDragIndicator(.visible)
+    }
+}
+extension ExperienceMission: Identifiable { var id: String { rawValue } }
+
+struct ExperienceGuideSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                Button("Đóng") { dismiss() }.padding(.horizontal)
+            }.padding(.top, 12)
+            GuideView()
+        }
+        .presentationDragIndicator(.visible)
+    }
+}

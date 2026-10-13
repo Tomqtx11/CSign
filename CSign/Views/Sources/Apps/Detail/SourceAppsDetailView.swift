@@ -14,6 +14,10 @@ import NukeUI
 // MARK: - SourceAppsDetailView
 struct SourceAppsDetailView: View {
 	@ObservedObject var downloadManager = DownloadManager.shared
+    @ObservedObject private var experience = ExperienceStore.shared
+    private var discoveryItem: DiscoveryApp? {
+        sourceURL.map { DiscoveryApp(sourceURL: $0, repository: source, app: app) }
+    }
 	@State private var _downloadProgress: Double = 0
 	@State var cancellable: AnyCancellable? // Combine
 	@State private var _isScreenshotPreviewPresented: Bool = false
@@ -66,6 +70,14 @@ struct SourceAppsDetailView: View {
 				}
 				
 				Divider()
+                if let item = discoveryItem, experience.isGame(item) {
+                    Button {
+                        experience.togglePlaying(item)
+                    } label: {
+                        Label(experience.isPlaying(item) ? "Đã ghim vào Game đang chơi • bấm để bỏ" : "Ghim vào Game đang chơi", systemImage: experience.isPlaying(item) ? "pin.fill" : "gamecontroller")
+                            .frame(maxWidth: .infinity).padding(.vertical, 7)
+                    }.buttonStyle(.bordered).tint(.indigo)
+                }
 				_infoPills(app: app)
 				Divider()
                 
@@ -194,7 +206,17 @@ struct SourceAppsDetailView: View {
 		.flexibleHeaderScrollView()
 		.shouldSetInset()
 		.toolbar {
-			
+            ToolbarItem(placement: .topBarTrailing) {
+                if let item = discoveryItem {
+                    Button {
+                        experience.toggle(item)
+                    } label: {
+                        Image(systemName: experience.isFavorite(item) ? "heart.fill" : "heart")
+                            .foregroundStyle(CSignTheme.pink)
+                    }
+                    .accessibilityLabel(experience.isFavorite(item) ? "Bỏ yêu thích" : "Lưu yêu thích")
+                }
+            }
 		}
 		.fullScreenCover(isPresented: $_isScreenshotPreviewPresented) {
 			if let screenshotURLs = fetchedScreenshotURLs ?? app.screenshotURLs {
@@ -205,6 +227,8 @@ struct SourceAppsDetailView: View {
 			}
 		}
 		.onAppear {
+            experience.complete(.explored)
+            if let item = discoveryItem { experience.markSeen(item) }
 			if let bundleId = app.id, (app.screenshotURLs == nil || app.screenshotURLs!.isEmpty) {
 				fetchAppStoreScreenshots(bundleId: bundleId)
 			}

@@ -11,6 +11,7 @@ import NimbleViews
 // MARK: - View
 struct CertificatesView: View {
 	@AppStorage("csign.selectedCert") private var _storedSelectedCert: Int = 0
+    @AppStorage("csign.selectedCertUUID") private var _storedSelectedID = ""
 	
 	@State private var _isAddingPresenting = false
 	@State private var _isRenamingPresenting = false
@@ -42,6 +43,10 @@ struct CertificatesView: View {
 				_cellButton(for: cert, at: index)
 			}
 		}
+        .onAppear { _reconcileDefaultSelection() }
+        .onChange(of: _certificates.map { $0.uuid ?? $0.objectID.uriRepresentation().absoluteString }) { _ in
+            _reconcileDefaultSelection()
+        }
 		.navigationTitle(.localized("Certificates"))
 		.overlay {
 			if _certificates.isEmpty {
@@ -89,6 +94,18 @@ struct CertificatesView: View {
 	}
 }
 
+extension CertificatesView {
+    private func _reconcileDefaultSelection() {
+        guard _bindingSelectedCert == nil else { return }
+        let ids = _certificates.map { $0.uuid ?? $0.objectID.uriRepresentation().absoluteString }
+        guard let index = ExperienceCertificateSelection.index(identifiers: ids, selectedID: _storedSelectedID, legacyIndex: _storedSelectedCert) else {
+            _storedSelectedID = ""; _storedSelectedCert = 0; return
+        }
+        if _storedSelectedCert != index { _storedSelectedCert = index }
+        if _storedSelectedID != ids[index] { _storedSelectedID = ids[index] }
+    }
+}
+
 // MARK: - View extension
 extension CertificatesView {
 	@ViewBuilder
@@ -103,6 +120,9 @@ extension CertificatesView {
 		
 		Button {
 			_selectedCertBinding.wrappedValue = index
+            if _bindingSelectedCert == nil {
+                _storedSelectedID = cert.uuid ?? cert.objectID.uriRepresentation().absoluteString
+            }
 		} label: {
 			CertificatesCellView(
 				cert: cert

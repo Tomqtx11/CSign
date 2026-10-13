@@ -34,38 +34,12 @@ struct SourcesView: View {
 	var body: some View {
 		NBNavigationView(.localized("Sources")) {
 			NBListAdaptable {
-				// MARK: - Fixed Banners (Mua Chứng Chỉ & Tham gia cộng đồng)
-				Section {
-					_fixedBanners()
-				}
-				.listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-				.listRowBackground(Color.clear)
-				.listRowSeparator(.hidden)
-				
+                Section { _fixedBanners() }
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+
 				if !_filteredSources.isEmpty {
-					Section {
-						NavigationLink {
-							SourceAppsView(object: Array(_sources), viewModel: viewModel)
-						} label: {
-							let isRegular = horizontalSizeClass != .compact
-							HStack(spacing: 18) {
-								Image("Repositories").appIconStyle()
-								NBTitleWithSubtitleView(
-									title: .localized("All Repositories"),
-									subtitle: .localized("See all apps from your sources")
-								)
-							}
-							.padding(isRegular ? 12 : 0)
-							.background(
-								isRegular
-									? RoundedRectangle(cornerRadius: 18, style: .continuous)
-									.fill(Color(.quaternarySystemFill))
-									: nil
-							)
-						}
-						.buttonStyle(.plain)
-					}
-					
 					NBSection(
 						.localized("Repositories"),
 						secondary: _filteredSources.count.description
@@ -80,6 +54,21 @@ struct SourcesView: View {
 						}
 					}
 				}
+                if _searchText.isEmpty {
+                    Section("Không gian của bạn") {
+                        NavigationLink { FavoritesView() } label: {
+                            Label("Ứng dụng yêu thích", systemImage: "heart.fill").foregroundStyle(CSignTheme.pink)
+                        }
+                        NavigationLink { PlayingGamesView() } label: {
+                            Label("Game đang chơi", systemImage: "gamecontroller.fill")
+                        }
+                        NavigationLink { MissionsView() } label: {
+                            Label("Tủ huy hiệu", systemImage: "seal.fill")
+                        }
+                    }
+
+                }
+
 			}
 			.searchable(text: $_searchText, placement: .platform())
 			.overlay {
@@ -111,6 +100,7 @@ struct SourcesView: View {
 			}
 			.refreshable {
 				await viewModel.fetchSources(_sources, refresh: true)
+            await ExperienceStore.shared.refreshWeekly()
 			}
 			.sheet(isPresented: $_isAddingPresenting) {
 				SourcesAddView()
@@ -118,6 +108,7 @@ struct SourcesView: View {
 		}
 		.task(id: Array(_sources)) {
 			await viewModel.fetchSources(_sources)
+            await ExperienceStore.shared.refreshWeekly()
 		}
 		
 	}
@@ -138,12 +129,12 @@ extension SourcesView {
 					imageURL: SourcesView.banner1URL,
 					title: "🛒 Mua Chứng Chỉ",
 					url: URL(string: "https://cuios.shop")!
-				)
+				).accessibilityIdentifier("sources.banner.buy")
 				_bannerCard(
 					imageURL: SourcesView.banner2URL,
 					title: "👥 Tham Gia Cộng Đồng",
 					url: URL(string: "https://t.me/chungchicuios")!
-				)
+				).accessibilityIdentifier("sources.banner.community")
 			}
 			.padding(.horizontal, 16)
 			.padding(.vertical, 8)

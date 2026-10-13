@@ -4,9 +4,15 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      ui_only:
+        description: 'Only run the simulator UI verification'
+        type: boolean
+        default: false
 
 jobs:
   signing-regressions:
+    if: inputs.ui_only != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,6 +45,11 @@ jobs:
           CSIGN_INSTALL_PAGE_OUTPUT="$RUNNER_TEMP/csign-install-page.html" "$RUNNER_TEMP/csign-regressions"
           node Tests/installation_page_regressions.js "$RUNNER_TEMP/csign-install-page.html"
 
+      - name: Test favorites, missions and weekly selections
+        run: |
+          swiftc CSign/Utilities/ExperienceData.swift Tests/ExperienceRegressionTests.swift -o "$RUNNER_TEMP/csign-experience-tests"
+          "$RUNNER_TEMP/csign-experience-tests"
+
       - name: Test IPA packaging and bundle preservation
         run: python3 Tests/archive_regressions.py
 
@@ -68,3 +79,64 @@ jobs:
         with:
           name: CSign
           path: packages/CSign.ipa
+
+  simulator:
+    needs: signing-regressions
+    if: always() && github.ref == 'refs/heads/feature/experience-20261013' && (inputs.ui_only == true || needs.signing-regressions.result == 'success')
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.3'
+      - name: Boot iPhone before compiling
+        timeout-minutes: 5
+        run: |
+          CSIGN_DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for k,v in d["devices"].items() if "iOS-18" in k for x in v if x["name"] == "iPhone 16"))')
+          echo "CSIGN_DEVICE=$CSIGN_DEVICE" >> "$GITHUB_ENV"
+          xcrun simctl boot "$CSIGN_DEVICE"
+          xcrun simctl bootstatus "$CSIGN_DEVICE" -b
+          xcrun simctl status_bar "$CSIGN_DEVICE" override --time '9:41' --batteryState charged --batteryLevel 100
+      - uses: actions/cache@v4
+        with:
+          path: SourcePackages
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: ${{ runner.os }}-spm-
+      - name: Simulator build cache
+        uses: irgaly/xcode-cache@v1
+        with:
+          key: simulator15-xcode263-cache-deriveddata-${{ github.sha }}
+          restore-keys: simulator15-xcode263-cache-deriveddata-
+          deriveddata-directory: .derivedData/simulator
+      - name: Build actual CSign app for simulator
+        run: |
+          make deps
+          xcodebuild -project CSign.xcodeproj -scheme CSign -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath .derivedData/simulator -clonedSourcePackagesDirPath SourcePackages -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES ARCHS="$(uname -m)" DSTROOT="$RUNNER_TEMP/csign-simulator" 2>&1 | tee "$RUNNER_TEMP/simulator-build.log"
+          mkdir -p "$RUNNER_TEMP/csign-simulator/Applications/CSign.app/signing-assets/DefaultCert"
+          cp BuiltInCert/* "$RUNNER_TEMP/csign-simulator/Applications/CSign.app/signing-assets/DefaultCert/"
+          cp deps/* "$RUNNER_TEMP/csign-simulator/Applications/CSign.app/"
+      - name: Install CSign on the booted iPhone
+        timeout-minutes: 3
+        run: xcrun simctl install "$CSIGN_DEVICE" "$RUNNER_TEMP/csign-simulator/Applications/CSign.app"
+      - name: Verify real UI actions and capture screens
+        timeout-minutes: 10
+        run: |
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install xcodegen
+          xcodegen generate --spec Tests/ExperienceUI/project.yml --project Tests/ExperienceUI
+          xcodebuild test -project Tests/ExperienceUI/ExperienceUI.xcodeproj -scheme ExperienceUI -destination "platform=iOS Simulator,id=$CSIGN_DEVICE" -resultBundlePath "$RUNNER_TEMP/experience-ui.xcresult" CODE_SIGNING_ALLOWED=NO
+      - name: Export screenshots
+        if: always()
+        run: |
+          if [ -d "$RUNNER_TEMP/experience-ui.xcresult" ]; then
+            xcrun xcresulttool export attachments --path "$RUNNER_TEMP/experience-ui.xcresult" --output-path "$RUNNER_TEMP/experience-screenshots"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: CSign-interface-verification
+          path: |
+            ${{ runner.temp }}/experience-screenshots
+            ${{ runner.temp }}/experience-ui.xcresult
+            ${{ runner.temp }}/simulator-build.log
