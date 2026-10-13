@@ -20,7 +20,7 @@ final class ExperienceUITests: XCTestCase {
         XCTAssertTrue(playing.exists)
         playing.tap()
         capture("03-games")
-        let badges = app.descendants(matching: .any)["experience.badges"].firstMatch
+        let badges = app.descendants(matching: .any).matching(identifier: "experience.badges").firstMatch
         reveal(badges, in: app)
         XCTAssertTrue(badges.exists)
         capture("04-playing-and-badges")
@@ -34,7 +34,7 @@ final class ExperienceUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Đang đeo"].waitForExistence(timeout: 5))
         capture("06-equipped-badge")
         app.tabBars.buttons["IPA Mod"].tap()
-        let archives = app.descendants(matching: .any)["sources.all-repositories"].firstMatch
+        let archives = app.descendants(matching: .any).matching(identifier: "sources.all-repositories").firstMatch
         XCTAssertTrue(archives.waitForExistence(timeout: 15))
         XCTAssertTrue(archives.isHittable, "Repositories must be visible first without scrolling past recommendations or advertising")
         capture("07-sources-first")
@@ -42,7 +42,7 @@ final class ExperienceUITests: XCTestCase {
     private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
         for _ in 0..<9 {
             if element.exists && element.isHittable { return }
-            app.swipeUp()
+            app.swipeUp(velocity: .slow)
         }
     }
     private func capture(_ name: String) {
