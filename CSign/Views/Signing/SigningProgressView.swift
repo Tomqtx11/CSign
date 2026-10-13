@@ -19,7 +19,7 @@ struct SigningProgressView: View {
 					Text(options.appIdentifier ?? app.identifier ?? "").font(.caption).foregroundStyle(.secondary).lineLimit(1)
 				}
 				Spacer(minLength: 0)
-				CSignMascotView(isWorking: !finished)
+				CSignMascotView(mood: error != nil ? .idle : (finished ? .celebrating : .signing))
 			}
 			if let error {
 				Label(error.localizedDescription, systemImage: "exclamationmark.circle.fill")
@@ -54,5 +54,12 @@ struct SigningProgressView: View {
 		.padding(24)
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.background(CSignTheme.gradient.opacity(0.05))
+        .onAppear { recordSuccess() }
+        .onChange(of: finished) { _ in recordSuccess() }
 	}
+    private func recordSuccess() {
+        if finished && error == nil && options.signingOption != .onlyModify {
+            ExperienceStore.shared.complete(.signed)
+        }
+    }
 }

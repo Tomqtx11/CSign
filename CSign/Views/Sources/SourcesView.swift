@@ -42,6 +42,15 @@ struct SourcesView: View {
 				.listRowBackground(Color.clear)
 				.listRowSeparator(.hidden)
 				
+                Section {
+                    NavigationLink { FavoritesView() } label: {
+                        Label("Yêu thích", systemImage: "heart.fill").foregroundStyle(CSignTheme.pink)
+                    }
+                    NavigationLink { MissionsView() } label: {
+                        Label("Nhiệm vụ & huy hiệu", systemImage: "seal")
+                    }
+                }
+                if _searchText.isEmpty { WeeklyPicksSection() }
 				if !_filteredSources.isEmpty {
 					Section {
 						NavigationLink {
@@ -111,6 +120,7 @@ struct SourcesView: View {
 			}
 			.refreshable {
 				await viewModel.fetchSources(_sources, refresh: true)
+            await ExperienceStore.shared.refreshWeekly()
 			}
 			.sheet(isPresented: $_isAddingPresenting) {
 				SourcesAddView()
@@ -118,6 +128,7 @@ struct SourcesView: View {
 		}
 		.task(id: Array(_sources)) {
 			await viewModel.fetchSources(_sources)
+            await ExperienceStore.shared.refreshWeekly()
 		}
 		
 	}

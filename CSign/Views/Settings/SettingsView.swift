@@ -39,9 +39,11 @@ struct SettingsView: View {
 	var body: some View {
 		NBNavigationView(.localized("Settings")) {
 			Form {
-				                
-
-                
+                Section("Trải nghiệm CSign") {
+                    NavigationLink { MissionsView() } label: { Label("Nhiệm vụ & huy hiệu", systemImage: "seal") }
+                    NavigationLink { FavoritesView() } label: { Label("Yêu thích", systemImage: "heart") }
+                    NavigationLink { GuideView() } label: { Label("Hướng dẫn sử dụng", systemImage: "book.closed") }
+                }
 				Section {
 					NavigationLink(destination: AppearanceView()) {
 						Label(.localized("Appearance"), systemImage: "paintbrush")

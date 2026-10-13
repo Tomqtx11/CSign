@@ -39,6 +39,11 @@ jobs:
           CSIGN_INSTALL_PAGE_OUTPUT="$RUNNER_TEMP/csign-install-page.html" "$RUNNER_TEMP/csign-regressions"
           node Tests/installation_page_regressions.js "$RUNNER_TEMP/csign-install-page.html"
 
+      - name: Test favorites, missions and weekly selections
+        run: |
+          swiftc CSign/Utilities/ExperienceData.swift Tests/ExperienceRegressionTests.swift -o "$RUNNER_TEMP/csign-experience-tests"
+          "$RUNNER_TEMP/csign-experience-tests"
+
       - name: Test IPA packaging and bundle preservation
         run: python3 Tests/archive_regressions.py
 

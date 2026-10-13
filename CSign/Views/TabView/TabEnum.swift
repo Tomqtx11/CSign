@@ -10,6 +10,7 @@ import NimbleViews
 import Combine
 
 enum TabEnum: String, CaseIterable, Hashable {
+	case today
 	case sources
 	case library
 	case history
@@ -19,6 +20,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 	
 	var title: String {
 		switch self {
+		case .today:        return "Hôm nay"
 		case .sources:     	return "IPA Mod"
 		case .library: 		return .localized("Thư viện")
 		case .history:      return .localized("Lịch sử")
@@ -30,6 +32,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 	
 	var icon: String {
 		switch self {
+		case .today:        return "sun.max"
 		case .sources: 		return "globe.desk"
 		case .library: 		return "square.grid.2x2"
 		case .history:      return "clock.arrow.circlepath"
@@ -42,6 +45,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 	@ViewBuilder
 	static func view(for tab: TabEnum) -> some View {
 		switch tab {
+		case .today: TodayView()
 		case .sources: SourcesView()
 		case .library: LibraryView()
 		case .history: HistoryView()
@@ -53,17 +57,18 @@ enum TabEnum: String, CaseIterable, Hashable {
 	
 	static var defaultTabs: [TabEnum] {
 		return [
-			.library,
+			.today,
 			.sources,
+			.library,
 			.history,
-			.guide,
 			.settings
 		]
 	}
 	
 	static var customizableTabs: [TabEnum] {
 		return [
-			.certificates
+			.certificates,
+			.guide
 		]
 	}
 }
