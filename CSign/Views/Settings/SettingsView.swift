@@ -14,6 +14,7 @@ import IDeviceSwift
 // MARK: - View
 struct SettingsView: View {
 	@AppStorage("csign.selectedCert") private var _storedSelectedCert: Int = 0
+    @State private var showingGuide = false
 
 	// MARK: Fetch
 	@FetchRequest(
@@ -42,7 +43,7 @@ struct SettingsView: View {
                 Section("Trải nghiệm CSign") {
                     NavigationLink { MissionsView() } label: { Label("Nhiệm vụ & huy hiệu", systemImage: "seal") }
                     NavigationLink { FavoritesView() } label: { Label("Yêu thích", systemImage: "heart") }
-                    NavigationLink { GuideView() } label: { Label("Hướng dẫn sử dụng", systemImage: "book.closed") }
+                    Button { showingGuide = true } label: { Label("Hướng dẫn sử dụng", systemImage: "book.closed") }
                 }
 				Section {
 					NavigationLink(destination: AppearanceView()) {
@@ -114,6 +115,7 @@ struct SettingsView: View {
 				
 			}
 
+            .sheet(isPresented: $showingGuide) { ExperienceGuideSheet() }
 			.toolbar {
 				ToolbarItem(placement: .navigationBarTrailing) {
 					Button(action: {

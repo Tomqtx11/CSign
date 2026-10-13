@@ -17,7 +17,7 @@ enum ExperienceMission: String, Codable, CaseIterable {
         switch self {
         case .explored: return "Khám phá một ứng dụng"
         case .favorite: return "Lưu ứng dụng yêu thích đầu tiên"
-        case .certificate: return "Có chứng chỉ sẵn sàng để ký"
+        case .certificate: return "Thêm chứng chỉ vào CSign"
         case .signed: return "Ký thành công IPA đầu tiên"
         }
     }

@@ -46,7 +46,7 @@ struct WeeklyPicksSection: View {
     @ObservedObject private var experience = ExperienceStore.shared
     @ObservedObject private var sources = SourcesViewModel.shared
     private var catalog: [String: DiscoveryApp] {
-        Dictionary(experience.catalog(sources.sources).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        Dictionary(experience.catalog(sources.sources, matching: Set(experience.weekly?.picks.map(\.id) ?? [])).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
     var body: some View {
         Section {
@@ -86,7 +86,7 @@ struct FavoritesView: View {
     @State private var search = ""
     @FetchRequest(entity: AltSource.entity(), sortDescriptors: []) private var repositories: FetchedResults<AltSource>
     private var catalog: [String: DiscoveryApp] {
-        Dictionary(experience.catalog(sources.sources).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        Dictionary(experience.catalog(sources.sources, matching: Set(experience.state.favorites.map(\.id))).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
     private var favorites: [FavoriteApp] {
         experience.state.favorites.filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) }
@@ -196,7 +196,21 @@ struct MissionsView: View {
         }
         .onAppear {
             if !certificates.isEmpty { experience.complete(.certificate) }
-            if !signedApps.isEmpty { experience.complete(.signed) }
+            experience.recordExistingSignatures(Array(signedApps))
         }
+    }
+}
+
+struct ExperienceGuideSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                Button("Đóng") { dismiss() }.padding(.horizontal)
+            }.padding(.top, 12)
+            GuideView()
+        }
+        .presentationDragIndicator(.visible)
     }
 }

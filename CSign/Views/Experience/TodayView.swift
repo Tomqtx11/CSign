@@ -28,7 +28,7 @@ struct TodayView: View {
     private var certificate: CertificatePair? {
         certificates.indices.contains(selectedCertificate) ? certificates[selectedCertificate] : nil
     }
-    private var newFavorites: Int { experience.catalog(sources.sources).filter { experience.hasUpdate($0) }.count }
+    private var newFavorites: Int { experience.catalog(sources.sources, matching: Set(experience.state.favorites.map(\.id))).filter { experience.hasUpdate($0) }.count }
     var body: some View {
         NBNavigationView("Hôm nay") {
             List {
@@ -102,7 +102,7 @@ struct TodayView: View {
                         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Đóng") { showingCertificate = false } } }
                 }
             }
-            .sheet(isPresented: $showingGuide) { GuideView() }
+            .sheet(isPresented: $showingGuide) { ExperienceGuideSheet() }
             .refreshable { await refresh(checkUpdates: true) }
             .task {
                 recordExistingProgress()
@@ -124,7 +124,7 @@ struct TodayView: View {
     }
     private func recordExistingProgress() {
         if !certificates.isEmpty { experience.complete(.certificate) }
-        if !signedApps.isEmpty { experience.complete(.signed) }
+        experience.recordExistingSignatures(Array(signedApps))
     }
     private func refresh(checkUpdates: Bool) async {
         guard !checking else { return }

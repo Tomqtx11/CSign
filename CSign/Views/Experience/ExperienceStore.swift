@@ -56,11 +56,32 @@ final class ExperienceStore: ObservableObject {
         UserDefaults.standard.set(data, forKey: Self.stateKey)
     }
 
-    func catalog(_ repositories: [AltSource: ASRepository]) -> [DiscoveryApp] {
+    func recordExistingSignatures(_ apps: [Signed]) {
+        guard !state.completedMissions.contains(.signed) else { return }
+        for app in apps {
+            if let uuid = app.uuid,
+               let data = UserDefaults.standard.data(forKey: "csign_options_\(uuid)"),
+               let options = try? JSONDecoder().decode(Options.self, from: data) {
+                if options.signingOption != .onlyModify { complete(.signed); return }
+            } else if app.certificate != nil {
+                complete(.signed); return
+            }
+        }
+    }
+
+    func catalog(_ repositories: [AltSource: ASRepository], matching keys: Set<String>) -> [DiscoveryApp] {
+        guard !keys.isEmpty else { return [] }
         var result: [DiscoveryApp] = []
         for (source, repository) in repositories {
             guard let url = source.sourceURL else { continue }
-            result += repository.apps.map { DiscoveryApp(sourceURL: url, repository: repository, app: $0) }
+            let prefix = ExperienceState.favoriteKey(sourceURL: url, appIdentifier: "")
+            guard keys.contains(where: { $0.hasPrefix(prefix) }) else { continue }
+            for app in repository.apps {
+                let key = prefix + (app.id ?? app.currentName)
+                if keys.contains(key) {
+                    result.append(DiscoveryApp(sourceURL: url, repository: repository, app: app))
+                }
+            }
         }
         return result.sorted { $0.id < $1.id }
     }
