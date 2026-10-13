@@ -90,10 +90,16 @@ jobs:
           path: SourcePackages
           key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
           restore-keys: ${{ runner.os }}-spm-
+      - name: Simulator build cache
+        uses: irgaly/xcode-cache@v1
+        with:
+          key: simulator-xcode-cache-deriveddata-${{ github.sha }}
+          restore-keys: simulator-xcode-cache-deriveddata-
+          deriveddata-directory: .derivedData/simulator
       - name: Build actual CSign app for simulator
         run: |
           make deps
-          xcodebuild -project CSign.xcodeproj -scheme CSign -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath .derivedData/simulator -clonedSourcePackagesDirPath SourcePackages -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO DSTROOT="$RUNNER_TEMP/csign-simulator" > "$RUNNER_TEMP/simulator-build.log" 2>&1 || { tail -100 "$RUNNER_TEMP/simulator-build.log"; exit 1; }
+          xcodebuild -project CSign.xcodeproj -scheme CSign -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath .derivedData/simulator -clonedSourcePackagesDirPath SourcePackages -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES ARCHS="$(uname -m)" DSTROOT="$RUNNER_TEMP/csign-simulator" 2>&1 | tee "$RUNNER_TEMP/simulator-build.log"
           mkdir -p "$RUNNER_TEMP/csign-simulator/Applications/CSign.app/signing-assets/DefaultCert"
           cp BuiltInCert/* "$RUNNER_TEMP/csign-simulator/Applications/CSign.app/signing-assets/DefaultCert/"
           cp deps/* "$RUNNER_TEMP/csign-simulator/Applications/CSign.app/"
@@ -107,7 +113,7 @@ jobs:
           xcrun simctl install "$CSIGN_DEVICE" "$RUNNER_TEMP/csign-simulator/Applications/CSign.app"
       - name: Verify real UI actions and capture screens
         run: |
-          brew install xcodegen
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install xcodegen
           xcodegen generate --spec Tests/ExperienceUI/project.yml --project Tests/ExperienceUI
           xcodebuild test -project Tests/ExperienceUI/ExperienceUI.xcodeproj -scheme ExperienceUI -destination "platform=iOS Simulator,id=$CSIGN_DEVICE" -resultBundlePath "$RUNNER_TEMP/experience-ui.xcresult" CODE_SIGNING_ALLOWED=NO
       - name: Export screenshots

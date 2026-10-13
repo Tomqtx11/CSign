@@ -4,7 +4,7 @@ final class ExperienceUITests: XCTestCase {
     func testDiscoveryCollectionsAndBadges() throws {
         continueAfterFailure = false
         let app = XCUIApplication(bundleIdentifier: "thewonderofyou.CSign")
-        app.launchArguments = ["-hasAcceptedDisclaimer", "YES", "-AppleLanguages", "(vi)", "-AppleLocale", "vi_VN"]
+        app.launchArguments = ["-hasAcceptedDisclaimer", "YES", "-CSign.playfulAnimations", "NO", "-AppleLanguages", "(vi)", "-AppleLocale", "vi_VN"]
         app.launch()
         XCTAssertTrue(app.buttons["Chào linh vật CSign"].waitForExistence(timeout: 30))
         capture("01-home")

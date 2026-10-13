@@ -202,7 +202,8 @@ struct MissionsView: View {
     }
     private func badgeSheet(_ badge: ExperienceMission) -> some View {
         let unlocked = experience.state.completedMissions.contains(badge)
-        return VStack(spacing: 22) {
+        return ScrollView {
+            VStack(spacing: 22) {
             ExperienceBadge(mission: badge, unlocked: unlocked, equipped: experience.state.equippedBadge == badge)
                 .scaleEffect(1.3).frame(height: 150)
             Text(badge.title).font(.title3.bold()).multilineTextAlignment(.center)
@@ -217,8 +218,8 @@ struct MissionsView: View {
                 }.buttonStyle(.borderedProminent).controlSize(.large)
             }
             Button("Đóng") { inspecting = nil }
-        }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity)
-            .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
+            }.padding(28).frame(maxWidth: .infinity)
+        }.presentationDetents([.large]).presentationDragIndicator(.visible)
     }
 }
 extension ExperienceMission: Identifiable { var id: String { rawValue } }
