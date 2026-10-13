@@ -70,6 +70,14 @@ struct SourceAppsDetailView: View {
 				}
 				
 				Divider()
+                if let item = discoveryItem, experience.isGame(item) {
+                    Button {
+                        experience.togglePlaying(item)
+                    } label: {
+                        Label(experience.isPlaying(item) ? "Đã ghim vào Game đang chơi • bấm để bỏ" : "Ghim vào Game đang chơi", systemImage: experience.isPlaying(item) ? "pin.fill" : "gamecontroller")
+                            .frame(maxWidth: .infinity).padding(.vertical, 7)
+                    }.buttonStyle(.bordered).tint(.indigo)
+                }
 				_infoPills(app: app)
 				Divider()
                 

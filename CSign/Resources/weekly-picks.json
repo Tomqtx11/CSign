@@ -1,21 +1,42 @@
 {
-  "title": "App đáng thử tuần này",
-  "edition": "Tuần 42 · 2026",
+  "title": "App đáng thử",
+  "edition": "Bộ sưu tập khám phá · 2026.10",
   "picks": [
     {
       "sourceURL": "https://raw.githubusercontent.com/Tomqtx11/kho-app-ipa/main/repo.json",
       "appIdentifier": "com.locket.Locket",
-      "caption": "Chia sẻ những khoảnh khắc nhỏ ngay trên màn hình chính."
+      "caption": "Chia sẻ những khoảnh khắc nhỏ ngay trên màn hình chính.",
+      "category": "app"
     },
     {
       "sourceURL": "https://raw.githubusercontent.com/Tomqtx11/kho-app-ipa/main/repo.json",
       "appIdentifier": "com.google.ios.youtube",
-      "caption": "Một lựa chọn để khám phá video và nội dung bạn yêu thích."
+      "caption": "Một lựa chọn để khám phá video và nội dung bạn yêu thích.",
+      "category": "app"
     },
     {
       "sourceURL": "https://raw.githubusercontent.com/Tomqtx11/kho-app-ipa/main/repo.json",
       "appIdentifier": "com.burbn.instagram",
-      "caption": "Lưu cảm hứng, xem ảnh và kết nối với bạn bè."
+      "caption": "Lưu cảm hứng, xem ảnh và kết nối với bạn bè.",
+      "category": "app"
+    },
+    {
+      "sourceURL": "https://raw.githubusercontent.com/Tomqtx11/kho-app-ipa/main/repo.json",
+      "appIdentifier": "nt.nb.ios",
+      "caption": "Vào đấu trường cùng Null’s Brawl.",
+      "category": "game"
+    },
+    {
+      "sourceURL": "https://raw.githubusercontent.com/Tomqtx11/kho-app-ipa/main/repo.json",
+      "appIdentifier": "nt.nr.ios",
+      "caption": "Khám phá chiến thuật cùng Null’s Royale.",
+      "category": "game"
+    },
+    {
+      "sourceURL": "https://raw.githubusercontent.com/Tomqtx11/kho-app-ipa/main/repo.json",
+      "appIdentifier": "com.supercell.clashofclans",
+      "caption": "Xây làng và thử một hành trình mới.",
+      "category": "game"
     }
   ]
 }

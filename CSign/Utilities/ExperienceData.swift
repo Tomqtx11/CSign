@@ -21,6 +21,14 @@ enum ExperienceMission: String, Codable, CaseIterable {
         case .signed: return "Ký thành công IPA đầu tiên"
         }
     }
+    var badgeName: String {
+        switch self {
+        case .explored: return "Tiên phong"
+        case .favorite: return "Sưu tầm"
+        case .certificate: return "Sẵn sàng"
+        case .signed: return "Phù thủy IPA"
+        }
+    }
     var symbol: String {
         switch self {
         case .explored: return "safari"
@@ -34,6 +42,27 @@ enum ExperienceMission: String, Codable, CaseIterable {
 struct ExperienceState: Codable, Equatable {
     var favorites: [FavoriteApp] = []
     var completedMissions: Set<ExperienceMission> = []
+    var playingGames: [FavoriteApp] = []
+    var equippedBadge: ExperienceMission?
+    // Old preview preferences must decode without losing favorites or earned badges.
+    enum CodingKeys: String, CodingKey { case favorites, completedMissions, playingGames, equippedBadge }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        favorites = try c.decodeIfPresent([FavoriteApp].self, forKey: .favorites) ?? []
+        completedMissions = try c.decodeIfPresent(Set<ExperienceMission>.self, forKey: .completedMissions) ?? []
+        playingGames = try c.decodeIfPresent([FavoriteApp].self, forKey: .playingGames) ?? []
+        equippedBadge = try c.decodeIfPresent(ExperienceMission.self, forKey: .equippedBadge)
+        if let badge = equippedBadge, !completedMissions.contains(badge) { equippedBadge = nil }
+    }
+    mutating func togglePlaying(_ app: FavoriteApp) {
+        if playingGames.contains(where: { $0.id == app.id }) { playingGames.removeAll { $0.id == app.id } }
+        else { playingGames.insert(app, at: 0) }
+    }
+    mutating func equip(_ badge: ExperienceMission?) {
+        guard badge == nil || completedMissions.contains(badge!) else { return }
+        equippedBadge = badge
+    }
     var rewardUnlocked: Bool { completedMissions.count == ExperienceMission.allCases.count }
 
     static func favoriteKey(sourceURL: URL, appIdentifier: String) -> String {
@@ -74,6 +103,8 @@ struct WeeklySelection: Codable, Equatable {
         let sourceURL: URL
         let appIdentifier: String
         let caption: String
+        var category: String? = nil
+        var isGame: Bool { category == "game" }
         var id: String { ExperienceState.favoriteKey(sourceURL: sourceURL, appIdentifier: appIdentifier) }
     }
     let title: String
@@ -86,5 +117,22 @@ struct WeeklySelection: Codable, Equatable {
             ["http", "https"].contains($0.sourceURL.scheme?.lowercased() ?? "") &&
             !$0.appIdentifier.isEmpty && !$0.caption.isEmpty
         }
+    }
+}
+
+/// Keep the chosen certificate when importing/deleting reorders the date-sorted list.
+enum ExperienceCertificateSelection {
+    static func index(identifiers: [String], selectedID: String, legacyIndex: Int) -> Int? {
+        guard !identifiers.isEmpty else { return nil }
+        if !selectedID.isEmpty, let index = identifiers.firstIndex(of: selectedID) { return index }
+        // An explicitly selected certificate was removed: reset to the first available one.
+        if !selectedID.isEmpty { return 0 }
+        return identifiers.indices.contains(legacyIndex) ? legacyIndex : 0
+    }
+    static func title(nickname: String?, profileName: String?) -> String {
+        for value in [nickname, profileName] {
+            if let value, !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return value }
+        }
+        return "Chứng chỉ đang dùng"
     }
 }

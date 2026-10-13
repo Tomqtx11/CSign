@@ -34,23 +34,6 @@ struct SourcesView: View {
 	var body: some View {
 		NBNavigationView(.localized("Sources")) {
 			NBListAdaptable {
-				// MARK: - Fixed Banners (Mua Chứng Chỉ & Tham gia cộng đồng)
-				Section {
-					_fixedBanners()
-				}
-				.listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-				.listRowBackground(Color.clear)
-				.listRowSeparator(.hidden)
-				
-                Section {
-                    NavigationLink { FavoritesView() } label: {
-                        Label("Yêu thích", systemImage: "heart.fill").foregroundStyle(CSignTheme.pink)
-                    }
-                    NavigationLink { MissionsView() } label: {
-                        Label("Nhiệm vụ & huy hiệu", systemImage: "seal")
-                    }
-                }
-                if _searchText.isEmpty { WeeklyPicksSection() }
 				if !_filteredSources.isEmpty {
 					Section {
 						NavigationLink {
@@ -72,7 +55,7 @@ struct SourcesView: View {
 									: nil
 							)
 						}
-						.buttonStyle(.plain)
+						.buttonStyle(.plain).accessibilityIdentifier("sources.all-repositories")
 					}
 					
 					NBSection(
@@ -89,6 +72,26 @@ struct SourcesView: View {
 						}
 					}
 				}
+                if _searchText.isEmpty {
+                    Section("Không gian của bạn") {
+                        NavigationLink { FavoritesView() } label: {
+                            Label("Ứng dụng yêu thích", systemImage: "heart.fill").foregroundStyle(CSignTheme.pink)
+                        }
+                        NavigationLink { PlayingGamesView() } label: {
+                            Label("Game đang chơi", systemImage: "gamecontroller.fill")
+                        }
+                        NavigationLink { MissionsView() } label: {
+                            Label("Tủ huy hiệu", systemImage: "seal.fill")
+                        }
+                    }
+                    Section {
+                        _fixedBanners()
+                    }
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+
 			}
 			.searchable(text: $_searchText, placement: .platform())
 			.overlay {

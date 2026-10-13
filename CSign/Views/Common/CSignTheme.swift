@@ -29,9 +29,10 @@ struct CSignMascotView: View {
     @State private var bouncing = false
     var isWorking = false
     var mood: Mood = .idle
+    var lively = false
     private var activeMood: Mood { isWorking ? .signing : mood }
     private var shouldAnimate: Bool {
-        activeMood != .idle && enabled && !reduceMotion && !lowPower && scenePhase == .active
+        (activeMood != .idle || lively) && enabled && !reduceMotion && !lowPower && scenePhase == .active
     }
     private var symbol: String {
         switch activeMood {
@@ -43,6 +44,15 @@ struct CSignMascotView: View {
     }
     var body: some View {
         ZStack {
+            if activeMood == .celebrating || lively {
+                ForEach(0..<5) { i in
+                    Image(systemName: i.isMultiple(of: 2) ? "sparkle" : "circle.fill")
+                        .font(.system(size: i.isMultiple(of: 2) ? 8 : 3, weight: .bold))
+                        .foregroundStyle(i.isMultiple(of: 2) ? CSignTheme.pink : CSignTheme.cyan)
+                        .offset(x: cos(Double(i) * 1.26) * 29, y: sin(Double(i) * 1.26) * 29)
+                        .opacity(shouldAnimate && bouncing ? 0.9 : 0.4)
+                }
+            }
             RoundedRectangle(cornerRadius: 18).fill(CSignTheme.gradient).opacity(0.12)
             Path { path in
                 path.move(to: CGPoint(x: 10, y: 24))

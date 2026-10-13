@@ -27,6 +27,7 @@ struct DiscoveryAppRow: View {
 
 struct ExperienceAppIcon: View {
     let url: URL?
+    var size: CGFloat = 48
     var body: some View {
         LazyImage(url: url) { state in
             if let image = state.image {
@@ -35,7 +36,7 @@ struct ExperienceAppIcon: View {
                 Image(systemName: "app.fill").resizable().scaledToFit().foregroundStyle(CSignTheme.cyan).padding(9)
             }
         }
-        .frame(width: 48, height: 48)
+        .frame(width: size, height: size)
         .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 11))
         .clipShape(RoundedRectangle(cornerRadius: 11))
         .accessibilityHidden(true)
@@ -139,67 +140,88 @@ struct FavoritesView: View {
 
 struct MissionsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("CSign.playfulAnimations") private var animations = true
     @AppStorage("CSign.activeTab") private var activeTab = TabEnum.today.rawValue
     @State private var showingCertificates = false
+    @State private var inspecting: ExperienceMission?
     @ObservedObject private var experience = ExperienceStore.shared
-    @AppStorage("CSign.userTintColor") private var tint = CSignTheme.defaultTint
     @FetchRequest(entity: CertificatePair.entity(), sortDescriptors: []) private var certificates: FetchedResults<CertificatePair>
     @FetchRequest(entity: Signed.entity(), sortDescriptors: []) private var signedApps: FetchedResults<Signed>
     var body: some View {
-        List {
-            Section {
-                VStack(spacing: 12) {
-                    CSignMascotView(mood: experience.state.rewardUnlocked ? .celebrating : .idle)
-                        .scaleEffect(1.5).frame(height: 80)
-                    Text(experience.state.rewardUnlocked ? "Nhà khám phá CSign" : "Bắt đầu hành trình CSign").font(.title3.bold())
-                    Text("\(experience.state.completedMissions.count)/4 nhiệm vụ hoàn thành").foregroundStyle(.secondary)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                VStack(spacing: 14) {
+                    CSignMascotView(mood: experience.state.rewardUnlocked ? .celebrating : .idle, lively: true)
+                        .scaleEffect(1.7).frame(height: 86)
+                    Text(experience.state.rewardUnlocked ? "Nhà khám phá CSign" : "Hành trình của bạn").font(.title2.bold())
+                    Text("\(experience.state.completedMissions.count) / 4 huy hiệu đã nhận").foregroundStyle(.secondary)
                     ProgressView(value: Double(experience.state.completedMissions.count), total: 4).tint(CSignTheme.cyan)
-                }.frame(maxWidth: .infinity).padding(.vertical, 12)
-            }
-            Section {
-                ForEach(ExperienceMission.allCases, id: \.rawValue) { mission in
-                    HStack(spacing: 12) {
-                        Image(systemName: mission.symbol).foregroundStyle(CSignTheme.cyan).frame(width: 24)
-                        Text(mission.title)
-                        Spacer()
-                        Image(systemName: experience.state.completedMissions.contains(mission) ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(experience.state.completedMissions.contains(mission) ? CSignTheme.cyan : Color.secondary)
-                    }.padding(.vertical, 5)
+                    Text("Mở khóa từng huy hiệu bằng thao tác thật. Bấm huy hiệu để xem điều kiện hoặc đeo cho linh vật.")
+                        .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                }.frame(maxWidth: .infinity).experienceCard()
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 140))], spacing: 14) {
+                    ForEach(ExperienceMission.allCases, id: \.rawValue) { mission in
+                        Button { inspecting = mission } label: {
+                            VStack(spacing: 14) {
+                                ExperienceBadge(mission: mission, unlocked: experience.state.completedMissions.contains(mission), equipped: experience.state.equippedBadge == mission)
+                                Text(mission.title).font(.caption).foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center).frame(minHeight: 34)
+                            }.frame(maxWidth: .infinity).experienceCard()
+                        }.buttonStyle(.plain).accessibilityIdentifier("experience.badge." + mission.rawValue)
+                    }
                 }
-            } header: { Text("Nhiệm vụ làm quen") } footer: {
-                Text("Tiến độ được ghi nhận từ thao tác thật và lưu trên thiết bị. Các mốc đã hoàn thành vẫn được giữ khi bạn dọn thư viện.")
-            }
-            Section {
-                Label("Huy hiệu Nhà khám phá CSign", systemImage: "seal.fill")
-                    .foregroundStyle(experience.state.rewardUnlocked ? CSignTheme.pink : Color.secondary)
-                Button {
-                    tint = "#8B5CF6"
-                } label: {
-                    Label(tint == "#8B5CF6" ? "Đang dùng màu Aurora" : "Mở khóa màu Aurora", systemImage: "paintpalette.fill")
-                }.disabled(!experience.state.rewardUnlocked)
-            } header: { Text("Phần thưởng") } footer: {
-                Text("Hoàn thành 4 nhiệm vụ để nhận huy hiệu và dùng màu Aurora. Bạn có thể đổi màu lại trong Giao diện.")
-            }
-            Section("Bắt đầu từ đây") {
-                Button("Khám phá kho IPA") { activeTab = TabEnum.sources.rawValue; dismiss() }
-                NavigationLink("Xem bộ sưu tập yêu thích") { FavoritesView() }
-                Button("Quản lý chứng chỉ") { showingCertificates = true }
-                Button("Mở thư viện để ký IPA") { activeTab = TabEnum.library.rawValue; dismiss() }
-            }
-        }
-        .navigationTitle("Nhiệm vụ & huy hiệu")
+                if experience.state.rewardUnlocked {
+                    Label("Đã hoàn thành hành trình • Nhà khám phá CSign", systemImage: "crown.fill")
+                        .font(.headline).foregroundStyle(CSignTheme.pink).frame(maxWidth: .infinity, alignment: .leading).experienceCard()
+                }
+                VStack(alignment: .leading, spacing: 16) {
+                    ExperienceSectionHeading(title: "Tiếp tục hành trình", subtitle: "Mỗi thao tác đều đưa bạn đến một mốc mới", symbol: "map")
+                    Button("Khám phá kho IPA →") { activeTab = TabEnum.sources.rawValue; dismiss() }
+                    NavigationLink("Lưu ứng dụng yêu thích →") { FavoritesView() }
+                    Button("Thêm hoặc chọn chứng chỉ →") { showingCertificates = true }
+                    Button("Mở thư viện để ký IPA →") { activeTab = TabEnum.library.rawValue; dismiss() }
+                }.frame(maxWidth: .infinity, alignment: .leading).experienceCard()
+            }.padding(16).frame(maxWidth: 820).frame(maxWidth: .infinity)
+        }.background(Color(uiColor: .systemGroupedBackground))
+        .navigationTitle("Tủ huy hiệu")
         .sheet(isPresented: $showingCertificates) {
             NavigationStack {
                 CertificatesView().navigationTitle("Chứng chỉ")
                     .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Đóng") { showingCertificates = false } } }
             }
         }
-        .onAppear {
-            if !certificates.isEmpty { experience.complete(.certificate) }
-            experience.recordExistingSignatures(Array(signedApps))
-        }
+        .sheet(item: $inspecting) { badge in badgeSheet(badge) }
+        .onAppear { recordProgress() }
+        .onChange(of: certificates.count) { _ in recordProgress() }
+        .onChange(of: signedApps.count) { _ in recordProgress() }
+    }
+    private func recordProgress() {
+        if !certificates.isEmpty { experience.complete(.certificate) }
+        experience.recordExistingSignatures(Array(signedApps))
+    }
+    private func badgeSheet(_ badge: ExperienceMission) -> some View {
+        let unlocked = experience.state.completedMissions.contains(badge)
+        return VStack(spacing: 22) {
+            ExperienceBadge(mission: badge, unlocked: unlocked, equipped: experience.state.equippedBadge == badge)
+                .scaleEffect(1.3).frame(height: 150)
+            Text(badge.title).font(.title3.bold()).multilineTextAlignment(.center)
+            Text(unlocked ? "Bạn đã nhận được huy hiệu này. Đeo huy hiệu để linh vật ở Hôm nay mang dấu ấn của bạn." : "Hoàn thành thao tác này để nhận huy hiệu. Tiến độ sẽ được giữ trên thiết bị khi bạn đóng app.")
+                .foregroundStyle(.secondary).multilineTextAlignment(.center)
+            if unlocked {
+                Button(experience.state.equippedBadge == badge ? "Tháo huy hiệu" : "Đeo cho linh vật") {
+                    withAnimation(animations && !reduceMotion ? .spring(response: 0.3) : nil) {
+                        experience.equip(experience.state.equippedBadge == badge ? nil : badge)
+                    }
+                    inspecting = nil
+                }.buttonStyle(.borderedProminent).controlSize(.large)
+            }
+            Button("Đóng") { inspecting = nil }
+        }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity)
+            .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
     }
 }
+extension ExperienceMission: Identifiable { var id: String { rawValue } }
 
 struct ExperienceGuideSheet: View {
     @Environment(\.dismiss) private var dismiss

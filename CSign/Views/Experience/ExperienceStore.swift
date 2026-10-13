@@ -27,18 +27,24 @@ final class ExperienceStore: ObservableObject {
             .flatMap { try? JSONDecoder().decode(ExperienceState.self, from: $0) } ?? ExperienceState()
         let cached = UserDefaults.standard.data(forKey: Self.weeklyKey)
             .flatMap { try? JSONDecoder().decode(WeeklySelection.self, from: $0) }
-        if let cached, cached.isValid { weekly = cached }
-        else if let url = Bundle.main.url(forResource: "weekly-picks", withExtension: "json"),
+        if let url = Bundle.main.url(forResource: "weekly-picks", withExtension: "json"),
                 let data = try? Data(contentsOf: url),
                 let bundled = try? JSONDecoder().decode(WeeklySelection.self, from: data), bundled.isValid {
-            weekly = bundled
-        }
+            weekly = (cached?.isValid == true && cached?.edition == bundled.edition) ? cached : bundled
+        } else if let cached, cached.isValid { weekly = cached }
     }
 
     func isFavorite(_ item: DiscoveryApp) -> Bool { state.favorites.contains { $0.id == item.id } }
     func hasUpdate(_ item: DiscoveryApp) -> Bool {
         guard let saved = state.favorites.first(where: { $0.id == item.id }) else { return false }
         return ExperienceState.hasNewVersion(item.app.currentVersion, since: saved.seenVersion)
+    }
+    func isPlaying(_ item: DiscoveryApp) -> Bool { state.playingGames.contains { $0.id == item.id } }
+    func togglePlaying(_ item: DiscoveryApp) { state.togglePlaying(item.favorite); save() }
+    func removePlaying(_ app: FavoriteApp) { state.playingGames.removeAll { $0.id == app.id }; save() }
+    func equip(_ badge: ExperienceMission?) { state.equip(badge); save() }
+    func isGame(_ item: DiscoveryApp) -> Bool {
+        item.app.inferredCategory == "Games" || (weekly?.picks.contains { $0.id == item.id && $0.isGame } ?? false)
     }
     func toggle(_ item: DiscoveryApp) { state.toggle(item.favorite); save() }
     func remove(_ favorite: FavoriteApp) { state.favorites.removeAll { $0.id == favorite.id }; save() }
@@ -89,7 +95,7 @@ final class ExperienceStore: ObservableObject {
     /// Refresh only on demand; invalid/unavailable network content keeps the cached selection.
     func refreshWeekly() async {
         guard !isRefreshingWeekly,
-              let url = URL(string: "https://raw.githubusercontent.com/Tomqtx11/CSign/main/CSign/Resources/weekly-picks.json") else { return }
+              let url = URL(string: "https://raw.githubusercontent.com/Tomqtx11/CSign/feature/experience-20261013/CSign/Resources/weekly-picks.json") else { return }
         isRefreshingWeekly = true
         defer { isRefreshingWeekly = false }
         var request = URLRequest(url: url, cachePolicy: .reloadRevalidatingCacheData, timeoutInterval: 15)
