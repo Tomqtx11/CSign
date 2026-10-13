@@ -6,44 +6,70 @@ final class ExperienceUITests: XCTestCase {
         let app = XCUIApplication(bundleIdentifier: "thewonderofyou.CSign")
         app.launchArguments = ["-hasAcceptedDisclaimer", "YES", "-CSign.playfulAnimations", "NO", "-AppleLanguages", "(vi)", "-AppleLocale", "vi_VN"]
         app.launch()
-        XCTAssertTrue(app.buttons["Chào linh vật CSign"].waitForExistence(timeout: 30))
-        capture("01-home")
-        app.buttons["Chào linh vật CSign"].tap()
+        let mascot = app.buttons["Chào linh vật CSign"]
+        XCTAssertTrue(mascot.waitForExistence(timeout: 30))
+        mascot.tap() // XCTest handles the first-launch notification prompt here.
         XCTAssertTrue(app.staticTexts["Cùng khám phá điều mới nào! ✨"].exists)
-        let favorite = app.buttons["discovery.favorite.com.locket.Locket"]
+        XCTAssertTrue(app.tabBars.buttons["Trang Chủ"].exists)
+        capture("01-home")
+
+        let appCards = app.scrollViews["discovery.cards.apps"]
+        reveal(appCards, in: app)
+        XCTAssertTrue(appCards.waitForExistence(timeout: 60))
+        let appDetails = appCards.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "discovery.details."))
+        XCTAssertEqual(appDetails.count, 5, "App suggestions must contain five unique downloadable apps")
+        let previous = Set(appDetails.allElementsBoundByIndex.map(\.identifier))
+        let shuffle = app.buttons["discovery.shuffle.apps"]
+        reveal(shuffle, in: app)
+        shuffle.tap()
+        XCTAssertEqual(appDetails.count, 5)
+        XCTAssertNotEqual(Set(appDetails.allElementsBoundByIndex.map(\.identifier)), previous, "Shuffle must introduce another app when the repository has more than five")
+        let favorite = appCards.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "discovery.favorite.")).firstMatch
         reveal(favorite, in: app)
-        XCTAssertTrue(favorite.waitForExistence(timeout: 30), "Curated apps must resolve from the real repository")
-        capture("02-apps")
+        capture("02-random-apps")
         favorite.tap()
-        let playing = app.buttons["discovery.playing.nt.nb.ios"]
+
+        let gameCards = app.scrollViews["discovery.cards.games"]
+        reveal(gameCards, in: app)
+        XCTAssertTrue(gameCards.waitForExistence(timeout: 60))
+        let games = gameCards.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "discovery.details."))
+        XCTAssertEqual(games.count, 5, "Game suggestions must contain five unique downloadable games")
+        let playing = gameCards.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "discovery.playing.")).firstMatch
         reveal(playing, in: app)
-        XCTAssertTrue(playing.exists)
         playing.tap()
-        capture("03-games")
+        capture("03-random-games")
         let badges = app.descendants(matching: .any).matching(identifier: "experience.badges").firstMatch
         reveal(badges, in: app)
         XCTAssertTrue(badges.exists)
-        capture("04-playing-and-badges")
         badges.tap()
         let earned = app.buttons["experience.badge.favorite"]
         XCTAssertTrue(earned.waitForExistence(timeout: 10))
-        capture("05-badge-cabinet")
         earned.tap()
         XCTAssertTrue(app.buttons["Đeo cho linh vật"].waitForExistence(timeout: 10))
         app.buttons["Đeo cho linh vật"].tap()
         let equipped = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Đang đeo"), object: earned)
         XCTAssertEqual(XCTWaiter.wait(for: [equipped], timeout: 5), .completed)
-        capture("06-equipped-badge")
+        capture("04-equipped-badge")
+        app.navigationBars.buttons.firstMatch.tap()
+        for _ in 0..<10 {
+            if mascot.isHittable { break }
+            app.swipeDown(velocity: .slow)
+        }
+        XCTAssertTrue(app.staticTexts["Đang đeo huy hiệu Sưu tầm"].exists)
+        capture("05-home-equipped")
         app.tabBars.buttons["IPA Mod"].tap()
-        let archives = app.descendants(matching: .any).matching(identifier: "sources.all-repositories").firstMatch
-        XCTAssertTrue(archives.waitForExistence(timeout: 15))
-        XCTAssertTrue(archives.isHittable, "Repositories must be visible first without scrolling past recommendations or advertising")
-        capture("07-sources-first")
+        XCTAssertTrue(app.buttons["sources.banner.buy"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["sources.banner.buy"].isHittable, "Advertising banners must appear at the top")
+        XCTAssertTrue(app.buttons["sources.banner.community"].exists)
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "sources.all-repositories").firstMatch.exists)
+        XCTAssertFalse(app.staticTexts["Tất cả kho lưu trữ"].exists)
+        capture("06-banners-first")
     }
     private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
-        for _ in 0..<9 {
+        for _ in 0..<12 {
             if element.exists && element.isHittable { return }
-            app.swipeUp(velocity: .slow)
+            if element.exists && element.frame.midY < app.frame.midY { app.swipeDown(velocity: .slow) }
+            else { app.swipeUp(velocity: .slow) }
         }
     }
     private func capture(_ name: String) {

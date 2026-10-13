@@ -34,30 +34,12 @@ struct SourcesView: View {
 	var body: some View {
 		NBNavigationView(.localized("Sources")) {
 			NBListAdaptable {
+                Section { _fixedBanners() }
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+
 				if !_filteredSources.isEmpty {
-					Section {
-						NavigationLink {
-							SourceAppsView(object: Array(_sources), viewModel: viewModel)
-						} label: {
-							let isRegular = horizontalSizeClass != .compact
-							HStack(spacing: 18) {
-								Image("Repositories").appIconStyle()
-								NBTitleWithSubtitleView(
-									title: .localized("All Repositories"),
-									subtitle: .localized("See all apps from your sources")
-								)
-							}
-							.padding(isRegular ? 12 : 0)
-							.background(
-								isRegular
-									? RoundedRectangle(cornerRadius: 18, style: .continuous)
-									.fill(Color(.quaternarySystemFill))
-									: nil
-							)
-						}
-						.buttonStyle(.plain).accessibilityIdentifier("sources.all-repositories")
-					}
-					
 					NBSection(
 						.localized("Repositories"),
 						secondary: _filteredSources.count.description
@@ -84,12 +66,7 @@ struct SourcesView: View {
                             Label("Tủ huy hiệu", systemImage: "seal.fill")
                         }
                     }
-                    Section {
-                        _fixedBanners()
-                    }
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+
                 }
 
 			}
@@ -152,12 +129,12 @@ extension SourcesView {
 					imageURL: SourcesView.banner1URL,
 					title: "🛒 Mua Chứng Chỉ",
 					url: URL(string: "https://cuios.shop")!
-				)
+				).accessibilityIdentifier("sources.banner.buy")
 				_bannerCard(
 					imageURL: SourcesView.banner2URL,
 					title: "👥 Tham Gia Cộng Đồng",
 					url: URL(string: "https://t.me/chungchicuios")!
-				)
+				).accessibilityIdentifier("sources.banner.community")
 			}
 			.padding(.horizontal, 16)
 			.padding(.vertical, 8)

@@ -2,6 +2,13 @@ import Foundation
 
 @main
 struct ExperienceRegressionTests {
+    struct SeededGenerator: RandomNumberGenerator {
+        var state: UInt64
+        mutating func next() -> UInt64 {
+            state = state &* 6364136223846793005 &+ 1442695040888963407
+            return state
+        }
+    }
     static func main() throws {
         let source = URL(string: "https://example.com/repo.json")!
         let other = URL(string: "https://example.org/repo.json")!
@@ -57,6 +64,23 @@ struct ExperienceRegressionTests {
         precondition(ExperienceCertificateSelection.index(identifiers: [], selectedID: "chosen", legacyIndex: 0) == nil)
         precondition(ExperienceCertificateSelection.title(nickname: nil, profileName: "Personal Profile") == "Personal Profile")
         precondition(ExperienceCertificateSelection.title(nickname: " ", profileName: nil) == "Chứng chỉ đang dùng")
+        var seedA = SeededGenerator(state: 123)
+        var sampler = ExperienceRecommendationSampler<Int>()
+        for i in 0..<100 { sampler.consider(i, key: "app.\(i)", using: &seedA) }
+        let sample = sampler.selection(using: &seedA)
+        precondition(sample.count == 5 && Set(sample).count == 5)
+        precondition(sample.contains { $0 >= 5 }, "Recommendations must not always take the first five apps")
+        var seedB = SeededGenerator(state: 456)
+        var small = ExperienceRecommendationSampler<Int>()
+        for i in 0..<3 { small.consider(i, key: "app.\(i)", using: &seedB); small.consider(i, key: "app.\(i)", using: &seedB) }
+        precondition(small.availableCount == 3)
+        precondition(Set(small.selection(using: &seedB)) == Set(0..<3), "Small catalogs must not invent or duplicate apps")
+        var next = ExperienceRecommendationSampler<Int>(previousKeys: Set((0..<5).map { "app.\($0)" }))
+        for i in 0..<6 { next.consider(i, key: "app.\(i)", using: &seedB) }
+        let nextSelection = next.selection(using: &seedB)
+        precondition(nextSelection.count == 5 && nextSelection.contains(5), "Changing a six-app pool must introduce the available sixth app")
+        var empty = ExperienceRecommendationSampler<Int>()
+        precondition(empty.selection(using: &seedB).isEmpty)
         print("PASS experience persistence, source isolation, update tracking, milestones and weekly validation")
     }
 }

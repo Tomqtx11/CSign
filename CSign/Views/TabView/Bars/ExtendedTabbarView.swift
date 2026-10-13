@@ -44,12 +44,6 @@ struct ExtendedTabbarView: View {
 			}
 			
 			TabSection("Sources") {
-				Tab(.localized("All Repositories"), systemImage: "globe.desk", value: "all-sources") {
-					NavigationStack {
-						SourceAppsView(object: Array(_sources), viewModel: viewModel)
-					}
-				}
-				
 				ForEach(_sources, id: \.identifier) { source in
 					Tab(value: "source." + (source.sourceURL?.absoluteString ?? source.identifier ?? "")) {
 						NavigationStack {
@@ -85,6 +79,7 @@ struct ExtendedTabbarView: View {
 	
 	
     private func validateSelection() {
+        if selectedTab == "all-sources" { selectedTab = TabEnum.sources.rawValue }
         if horizontalSizeClass == .compact && !TabEnum.defaultTabs.contains(where: { $0.rawValue == selectedTab }) {
             selectedTab = TabEnum.today.rawValue
         }

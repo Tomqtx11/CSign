@@ -136,3 +136,37 @@ enum ExperienceCertificateSelection {
         return "Chứng chỉ đang dùng"
     }
 }
+
+/// Uniform sampling without retaining the whole repository catalog.
+/// Duplicate bundle IDs do not occupy two places in one recommendation shelf.
+struct ExperienceRecommendationSampler<Item> {
+    private let limit: Int
+    private let previousKeys: Set<String>
+    private var visited: Set<String> = []
+    private var entries: [(key: String, item: Item)] = []
+    private var alternative: (key: String, item: Item)?
+    var availableCount: Int { visited.count }
+
+    init(limit: Int = 5, previousKeys: Set<String> = []) {
+        self.limit = max(0, limit)
+        self.previousKeys = previousKeys
+    }
+    mutating func consider<R: RandomNumberGenerator>(_ item: Item, key: String, using generator: inout R) {
+        guard limit > 0, visited.insert(key).inserted else { return }
+        let entry = (key: key, item: item)
+        if alternative == nil && !previousKeys.contains(key) { alternative = entry }
+        if entries.count < limit { entries.append(entry) }
+        else {
+            let index = Int.random(in: 0..<visited.count, using: &generator)
+            if index < limit { entries[index] = entry }
+        }
+    }
+    mutating func selection<R: RandomNumberGenerator>(using generator: inout R) -> [Item] {
+        // When a sixth candidate exists, changing suggestions always introduces a new item.
+        if !entries.isEmpty, Set(entries.map(\.key)) == previousKeys, let alternative {
+            entries[entries.count - 1] = alternative
+        }
+        entries.shuffle(using: &generator)
+        return entries.map(\.item)
+    }
+}

@@ -5,40 +5,38 @@ struct CuratedShelf: View {
     @ObservedObject private var experience = ExperienceStore.shared
     @ObservedObject private var sources = SourcesViewModel.shared
     @AppStorage("CSign.activeTab") private var activeTab = TabEnum.today.rawValue
-    private var picks: [WeeklySelection.Pick] { experience.weekly?.picks.filter { $0.isGame == games } ?? [] }
-    private var catalog: [String: DiscoveryApp] {
-        Dictionary(experience.catalog(sources.sources, matching: Set(picks.map(\.id))).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-    }
+    private var items: [DiscoveryApp] { games ? experience.suggestedGames : experience.suggestedApps }
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                ExperienceSectionHeading(title: games ? "Game cho cuộc vui mới" : "App đáng thử", subtitle: games ? "Chọn một game • ghim vào góc Đang chơi" : "CSign tuyển chọn • mở chi tiết để xem và tải", symbol: games ? "gamecontroller.fill" : "sparkles")
-                Button { activeTab = TabEnum.sources.rawValue } label: {
-                    Image(systemName: "arrow.up.right").font(.headline).padding(8)
-                }.accessibilityLabel("Mở kho IPA")
+                ExperienceSectionHeading(title: games ? "Game cho cuộc vui mới" : "App đáng thử", subtitle: "\(items.count) \(games ? "game" : "ứng dụng") • Vuốt ngang để khám phá", symbol: games ? "gamecontroller.fill" : "sparkles")
+                Button {
+                    experience.updateSuggestions(sources.sources, shuffle: true, gamesOnly: games)
+                } label: {
+                    Label("Đổi", systemImage: "shuffle").font(.caption.weight(.semibold)).frame(minHeight: 32)
+                }.buttonStyle(.bordered).disabled(items.isEmpty)
+                    .accessibilityLabel(games ? "Đổi gợi ý game" : "Đổi gợi ý app")
+                    .accessibilityIdentifier(games ? "discovery.shuffle.games" : "discovery.shuffle.apps")
             }
-            let items = catalog
-            if picks.contains(where: { items[$0.id] != nil }) {
+            if !items.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(alignment: .top, spacing: 14) {
-                        ForEach(picks) { pick in
-                            if let item = items[pick.id] {
-                                DiscoveryFeatureCard(item: item, caption: pick.caption, game: games)
-                            }
+                        ForEach(items) { item in
+                            DiscoveryFeatureCard(item: item, caption: experience.suggestionCaption(item), game: games)
                         }
                     }.padding(.vertical, 2)
-                }
+                }.accessibilityIdentifier(games ? "discovery.cards.games" : "discovery.cards.apps")
             } else {
                 VStack(alignment: .leading, spacing: 12) {
                     Label(sources.isFinished ? "Nguồn chưa cung cấp các lựa chọn này" : "Đang mở kho ứng dụng…", systemImage: games ? "gamecontroller" : "square.stack.3d.up")
                         .font(.headline)
-                    Text("Các thẻ dùng thông tin thật từ kho IPA của bạn. Kéo xuống để làm mới nguồn hoặc mở kho để kiểm tra.")
+                    Text("Kéo xuống để làm mới nguồn hoặc mở kho để khám phá ứng dụng.")
                         .font(.subheadline).foregroundStyle(.secondary)
-                    Button("Mở kho IPA") { activeTab = TabEnum.sources.rawValue }
-                        .buttonStyle(.bordered)
+                    Button("Mở kho IPA") { activeTab = TabEnum.sources.rawValue }.buttonStyle(.bordered)
                 }.frame(maxWidth: .infinity, alignment: .leading).experienceCard()
             }
-        }
+        }.accessibilityElement(children: .contain)
+            .accessibilityIdentifier(games ? "discovery.shelf.games" : "discovery.shelf.apps")
     }
 }
 
@@ -151,7 +149,7 @@ struct PlayingGamesView: View {
         List {
             Section {
                 if experience.state.playingGames.isEmpty {
-                    Label("Ghim game từ Hôm nay để tạo góc chơi của bạn.", systemImage: "gamecontroller.fill")
+                    Label("Ghim game từ Trang Chủ để tạo góc chơi của bạn.", systemImage: "gamecontroller.fill")
                         .padding(.vertical, 16)
                 } else {
                     let items = catalog

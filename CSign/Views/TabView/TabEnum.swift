@@ -20,7 +20,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 	
 	var title: String {
 		switch self {
-		case .today:        return "Hôm nay"
+		case .today:        return "Trang Chủ"
 		case .sources:     	return "IPA Mod"
 		case .library: 		return .localized("Thư viện")
 		case .history:      return .localized("Lịch sử")
@@ -32,7 +32,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 	
 	var icon: String {
 		switch self {
-		case .today:        return "sun.max"
+		case .today:        return "house"
 		case .sources: 		return "globe.desk"
 		case .library: 		return "square.grid.2x2"
 		case .history:      return "clock.arrow.circlepath"

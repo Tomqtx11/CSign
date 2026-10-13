@@ -207,7 +207,7 @@ struct MissionsView: View {
             ExperienceBadge(mission: badge, unlocked: unlocked, equipped: experience.state.equippedBadge == badge)
                 .scaleEffect(1.3).frame(height: 150)
             Text(badge.title).font(.title3.bold()).multilineTextAlignment(.center)
-            Text(unlocked ? "Bạn đã nhận được huy hiệu này. Đeo huy hiệu để linh vật ở Hôm nay mang dấu ấn của bạn." : "Hoàn thành thao tác này để nhận huy hiệu. Tiến độ sẽ được giữ trên thiết bị khi bạn đóng app.")
+            Text(unlocked ? "Bạn đã nhận được huy hiệu này. Đeo huy hiệu để linh vật ở Trang Chủ mang dấu ấn của bạn." : "Hoàn thành thao tác này để nhận huy hiệu. Tiến độ sẽ được giữ trên thiết bị khi bạn đóng app.")
                 .foregroundStyle(.secondary).multilineTextAlignment(.center)
             if unlocked {
                 Button(experience.state.equippedBadge == badge ? "Tháo huy hiệu" : "Đeo cho linh vật") {

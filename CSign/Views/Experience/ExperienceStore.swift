@@ -20,6 +20,8 @@ final class ExperienceStore: ObservableObject {
     private static let weeklyKey = "CSign.weeklySelection.v1"
     @Published private(set) var state: ExperienceState
     @Published private(set) var weekly: WeeklySelection?
+    @Published private(set) var suggestedApps: [DiscoveryApp] = []
+    @Published private(set) var suggestedGames: [DiscoveryApp] = []
     private var isRefreshingWeekly = false
 
     private init() {
@@ -90,6 +92,57 @@ final class ExperienceStore: ObservableObject {
             }
         }
         return result.sorted { $0.id < $1.id }
+    }
+
+    /// Suggestions change on entry/refresh or explicit shuffle, never on favorite/playing updates.
+    func updateSuggestions(_ repositories: [AltSource: ASRepository], shuffle: Bool = false, gamesOnly: Bool? = nil) {
+        guard !repositories.isEmpty else { return } // Keep the current cards while sources refresh.
+        var generator = SystemRandomNumberGenerator()
+        let oldApps = suggestedApps.map { $0.identifier.lowercased() }
+        let oldGames = suggestedGames.map { $0.identifier.lowercased() }
+        var apps = ExperienceRecommendationSampler<DiscoveryApp>(previousKeys: Set(oldApps))
+        var games = ExperienceRecommendationSampler<DiscoveryApp>(previousKeys: Set(oldGames))
+        var retainedApps: [String: DiscoveryApp] = [:]
+        var retainedGames: [String: DiscoveryApp] = [:]
+        let oldSources = Dictionary((suggestedApps + suggestedGames).map { ($0.identifier.lowercased(), $0.id) }, uniquingKeysWith: { first, _ in first })
+        let gameOverrides = Set(weekly?.picks.filter(\.isGame).map(\.id) ?? [])
+        for (source, repository) in repositories.sorted(by: { ($0.key.sourceURL?.absoluteString ?? "") < ($1.key.sourceURL?.absoluteString ?? "") }) {
+            guard let url = source.sourceURL else { continue }
+            let prefix = ExperienceState.favoriteKey(sourceURL: url, appIdentifier: "")
+            for app in repository.apps {
+                guard app.currentDownloadUrl != nil else { continue }
+                let identifier = app.id ?? app.currentName
+                let key = identifier.lowercased()
+                let item = DiscoveryApp(sourceURL: url, repository: repository, app: app)
+                let category = app.inferredCategory.lowercased()
+                let isGame = category == "games" || category == "game" || gameOverrides.contains(prefix + identifier)
+                if isGame {
+                    games.consider(item, key: key, using: &generator)
+                    if oldSources[key] == item.id { retainedGames[key] = item }
+                } else {
+                    apps.consider(item, key: key, using: &generator)
+                    if oldSources[key] == item.id { retainedApps[key] = item }
+                }
+            }
+        }
+        if gamesOnly != true {
+            if !shuffle, retainedApps.count == min(5, apps.availableCount), !retainedApps.isEmpty {
+                suggestedApps = oldApps.compactMap { retainedApps[$0] }
+            } else { suggestedApps = apps.selection(using: &generator) }
+        }
+        if gamesOnly != false {
+            if !shuffle, retainedGames.count == min(5, games.availableCount), !retainedGames.isEmpty {
+                suggestedGames = oldGames.compactMap { retainedGames[$0] }
+            } else { suggestedGames = games.selection(using: &generator) }
+        }
+    }
+
+    func suggestionCaption(_ item: DiscoveryApp) -> String {
+        if let caption = weekly?.picks.first(where: { $0.id == item.id })?.caption { return caption }
+        if let description = item.app.currentDescription, !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return String(description.split(whereSeparator: \.isNewline).joined(separator: " ").prefix(160))
+        }
+        return isGame(item) ? "Khám phá game mới và ghim vào góc Đang chơi của bạn." : "Một lựa chọn từ kho IPA của bạn để khám phá và trải nghiệm."
     }
 
     /// Refresh only on demand; invalid/unavailable network content keeps the cached selection.

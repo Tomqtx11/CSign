@@ -40,7 +40,7 @@ struct TodayView: View {
         experience.catalog(sources.sources, matching: Set(experience.state.favorites.map(\.id))).filter { experience.hasUpdate($0) }.count
     }
     var body: some View {
-        NBNavigationView("Hôm nay") {
+        NBNavigationView("Trang Chủ") {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 22) {
                     ExperienceHero(greeting: greeting, appCount: signedApps.count, sourceCount: repositories.count, downloading: !downloads.downloads.isEmpty)
@@ -66,10 +66,12 @@ struct TodayView: View {
             .sheet(isPresented: $showingGuide) { ExperienceGuideSheet() }
             .refreshable { await refresh(checkUpdates: true) }
             .task {
+                experience.updateSuggestions(sources.sources, shuffle: true)
                 observedMissions = experience.state.completedMissions
                 recordExistingProgress()
                 await refresh(checkUpdates: false)
             }
+            .onReceive(sources.$sources) { experience.updateSuggestions($0) }
             .task(id: certificateIDs) { reconcileCertificate() }
             .task(id: selectedCertificateID) { loadProfileName() }
             .onChange(of: signedApps.count) { _ in recordExistingProgress() }
@@ -216,6 +218,7 @@ struct TodayView: View {
         defer { checking = false }
         await sources.fetchSources(repositories, refresh: checkUpdates)
         await experience.refreshWeekly()
+        experience.updateSuggestions(sources.sources, shuffle: checkUpdates)
         if checkUpdates {
             let local: [AppInfoPresentable] = signedApps.map { $0 as AppInfoPresentable } + importedApps.map { $0 as AppInfoPresentable }
             await updates.checkForUpdates(sources: Array(repositories), localApps: local)
