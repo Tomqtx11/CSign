@@ -4,7 +4,7 @@ final class ExperienceUITests: XCTestCase {
     func testDiscoveryCollectionsAndBadges() throws {
         continueAfterFailure = false
         let app = XCUIApplication(bundleIdentifier: "thewonderofyou.CSign")
-        app.launchArguments = ["-hasAcceptedDisclaimer", "YES", "-CSign.activeTab", "today", "-AppleLanguages", "(vi)", "-AppleLocale", "vi_VN"]
+        app.launchArguments = ["-hasAcceptedDisclaimer", "YES", "-AppleLanguages", "(vi)", "-AppleLocale", "vi_VN"]
         app.launch()
         XCTAssertTrue(app.buttons["Chào linh vật CSign"].waitForExistence(timeout: 30))
         capture("01-home")
@@ -31,7 +31,8 @@ final class ExperienceUITests: XCTestCase {
         earned.tap()
         XCTAssertTrue(app.buttons["Đeo cho linh vật"].waitForExistence(timeout: 10))
         app.buttons["Đeo cho linh vật"].tap()
-        XCTAssertTrue(app.staticTexts["Đang đeo"].waitForExistence(timeout: 5))
+        let equipped = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Đang đeo"), object: earned)
+        XCTAssertEqual(XCTWaiter.wait(for: [equipped], timeout: 5), .completed)
         capture("06-equipped-badge")
         app.tabBars.buttons["IPA Mod"].tap()
         let archives = app.descendants(matching: .any).matching(identifier: "sources.all-repositories").firstMatch
